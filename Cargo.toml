@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [build-dependencies]
-lib_export_generator={ git="https://github.com/SuccessfullyFailed/lib_export_generator.git" }
+crate_manager={ git="https://github.com/SuccessfullyFailed/crate_manager.git" }
