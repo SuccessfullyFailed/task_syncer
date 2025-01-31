@@ -26,7 +26,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "crate_manager"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/crate_manager.git#698e3512d5bfc631e294dba2c702d48d169cba9c"
+source = "git+https://github.com/SuccessfullyFailed/crate_manager.git#c9b35edb0a9c8c070bcdcba647cf1af2ef2a1f47"
 dependencies = [
  "file_ref",
  "omni_parser",
@@ -35,7 +35,7 @@ dependencies = [
 [[package]]
 name = "file_ref"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/file_ref.git#797dfb9f260589743baf8c007fd4f98c8314cf4e"
+source = "git+https://github.com/SuccessfullyFailed/file_ref.git#ce3a1861da67ff44c22e2fecef0b7f6e53c7a413"
 dependencies = [
  "unit_test_support",
 ]
@@ -66,7 +66,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 [[package]]
 name = "omni_parser"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/omni_parser.git?branch=no-build-script#72098551a206330d298e1cec24616657b040228a"
+source = "git+https://github.com/SuccessfullyFailed/omni_parser.git?branch=no-build-script#ecc99d9e157911de00c3097cffdb218ae38e9c70"
 dependencies = [
  "file_ref",
  "regex",
@@ -185,7 +185,7 @@ checksum = "a210d160f08b701c8721ba1c726c11662f877ea6b7094007e1ca9a1041945034"
 [[package]]
 name = "unit_test_support"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/unit_test_support.git#d7ae2cf647b2d8a95d0a5925fd951199d3dc994a"
+source = "git+https://github.com/SuccessfullyFailed/unit_test_support.git#52513141dcd5c9f82c4a8bbd5d17fa7fb9f64205"
 dependencies = [
  "rand",
 ]
