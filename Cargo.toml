@@ -2,6 +2,3 @@
 name = "task_syncer"
 version = "0.1.0"
 edition = "2021"
-
-[build-dependencies]
-crate_manager={ git="https://github.com/SuccessfullyFailed/crate_manager.git" }
