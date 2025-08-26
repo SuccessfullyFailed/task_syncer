@@ -4,8 +4,8 @@ use crate::Event;
 
 
 pub type HandlerResult = Result<(), Box<dyn Error>>;
-pub type Handler = Box<dyn Fn(&mut Event) -> HandlerResult>;
-pub type ErrorHandler = Box<dyn Fn(&mut Event, Box<dyn Error>)>;
+pub type Handler = Box<dyn Fn(&mut Event) -> HandlerResult + Send>;
+pub type ErrorHandler = Box<dyn Fn(&mut Event, Box<dyn Error>) + Send>;
 
 
 
@@ -22,7 +22,7 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&mut Event) -> HandlerResult + 'static {
+	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
 		Task {
 			name: name.to_string(),
 			event: Event::new(),
@@ -34,13 +34,13 @@ impl Task {
 	}
 
 	/// Return self with a new error handler.
-	pub fn on_error<T>(mut self, handler:T) -> Self where T:Fn(&mut Event, Box<dyn Error>) + 'static {
+	pub fn on_error<T>(mut self, handler:T) -> Self where T:Fn(&mut Event, Box<dyn Error>) + Send + 'static {
 		self.error_handler = Box::new(handler);
 		self
 	}
 
 	/// Return self with an afterwards handler.
-	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + 'static {
+	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
 		self.then_handlers.push(Box::new(handler));
 		self
 	}
