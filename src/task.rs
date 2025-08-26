@@ -1,4 +1,4 @@
-use std::{ error::Error, time::{Duration, Instant} };
+use std::{ error::Error, time::{ Duration, Instant } };
 use crate::Event;
 
 
@@ -93,5 +93,15 @@ impl Task {
 	pub fn delay(mut self, delay:Duration) -> Self {
 		self.event.delay(delay);
 		self
+	}
+
+	/// Pause the event. Stores the current time and adds the paused time to the trigger timer upon resume.
+	pub fn pause(&mut self, now:&Instant) {
+		self.event.pause(now);
+	}
+
+	/// Resume the event. Adds the paused time to the trigger timer.
+	pub fn resume(&mut self) {
+		self.event.resume();
 	}
 }

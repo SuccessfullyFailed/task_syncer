@@ -106,4 +106,39 @@ mod tests {
 		println!("Took {}ms to do 1_000_000 loops.", duration.as_millis()); // 75ms in release mode.
 		assert!(duration.as_millis() < 1000);
 	}
+
+	#[test]
+	fn test_system_pausing() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+		const INTERVAL:Duration = Duration::from_millis(10);
+
+		// Create some debug tasks.
+		let mut task_system:TaskSystem = TaskSystem::new();
+		task_system.add_task(Task::new("test", |event| unsafe {
+			MODIFICATION_CHECK += 1;
+			if MODIFICATION_CHECK < 20 {
+				event.reschedule(INTERVAL)
+			} else {
+				Ok(())
+			}
+		}));
+		let end_time:Instant = Instant::now() + INTERVAL * 10;
+		task_system.run_while(|_| Instant::now() < end_time);
+
+		// Validate task was executed 10 times.
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 10);
+
+		// Pause system.
+		task_system.pause();
+		let end_time:Instant = Instant::now() + INTERVAL * 10;
+		task_system.run_while(|_| Instant::now() < end_time);
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 10);
+
+		// Resume system.
+		task_system.resume();
+		task_system.run_once(&Instant::now());
+		let end_time:Instant = Instant::now() + INTERVAL * 10;
+		task_system.run_while(|_| Instant::now() < end_time);
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 20);
+	}
 }

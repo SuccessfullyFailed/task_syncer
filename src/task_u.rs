@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-	use std::time::{ Duration, Instant };
+	use std::{ thread::sleep, time::{ Duration, Instant } };
 	use crate::Task;
 
 
@@ -55,5 +55,27 @@ mod test {
 		assert!(!task_b.should_run(&now));
 		assert!(!task_b.should_run(&(now + Duration::from_millis(1))));
 		assert!(task_b.should_run(&(now + Duration::from_millis(11))));
+	}
+
+	#[test]
+	fn test_task_pausing() {
+		let now:Instant = Instant::now();
+		
+		let mut task:Task = Task::new("test", |_| Ok(())).delay(Duration::from_millis(3));
+
+		assert!(!task.should_run(&now));
+		assert!(!task.should_run(&(now + Duration::from_millis(1))));
+		assert!(task.should_run(&(now + Duration::from_millis(4))));
+		
+		let pausing_time:Duration = Duration::from_millis(250);
+		task.pause(&now);
+		sleep(pausing_time);
+		task.resume();
+
+		assert!(!task.should_run(&now));
+		assert!(!task.should_run(&(now + Duration::from_millis(1))));
+		assert!(!task.should_run(&(now + Duration::from_millis(4))));
+		assert!(!task.should_run(&(now + Duration::from_millis(250))));
+		assert!(task.should_run(&(now + Duration::from_millis(260))));
 	}
 }

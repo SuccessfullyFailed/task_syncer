@@ -53,22 +53,26 @@ impl TaskSystem {
 
 	/// Run the task-system indefinitely.
 	pub fn run(&mut self) {
+		self.run_while(|_| true);
+	}
+
+	/// Run the system while the given statement is true.
+	pub fn run_while<T>(&mut self, a:T) where T:Fn(&TaskSystem) -> bool {
 		use std::thread::sleep;
 
-		loop {
-			let loop_start:Instant = Instant::now();
+		let mut loop_start:Instant = Instant::now();
+		while a(self) {
 			let next_iteration_target:Instant = loop_start + self.interval;
 
 			// Update tasks.
-			for task in self.tasks.iter_mut().filter(|task| task.should_run(&loop_start)) {
-				task.run();
-			}
-			self.tasks.retain(|task| !task.expired());
+			self.run_once(&loop_start);
 
 			// Await interval.
 			let loop_end:Instant = Instant::now();
 			if next_iteration_target > loop_end {
-				sleep(next_iteration_target - loop_end);
+				let sleep_time:Duration = next_iteration_target - loop_end;
+				loop_start = loop_end + sleep_time;
+				sleep(sleep_time);
 			}
 
 			// Stop the system after a specific amount of loops in unit tests.
@@ -79,6 +83,29 @@ impl TaskSystem {
 					break;
 				}
 			}
+		}
+	}
+
+	/// Update all tasks once.
+	pub fn run_once(&mut self, now:&Instant) {
+		for task in self.tasks.iter_mut().filter(|task| task.should_run(now)) {
+			task.run();
+		}
+		self.tasks.retain(|task| !task.expired());
+	}
+
+	/// Pause the system. Stores the current time and adds the paused time to the tasks' trigger timer upon resume.
+	pub fn pause(&mut self) {
+		let now:Instant = Instant::now();
+		for task in &mut self.tasks {
+			task.pause(&now);
+		}
+	}
+
+	/// Resume the event. Adds the paused time to the tasks' trigger timer.
+	pub fn resume(&mut self) {
+		for task in &mut self.tasks {
+			task.resume();
 		}
 	}
 }
