@@ -13,9 +13,10 @@ pub struct Task {
 	name:String,
 	event:Event,
 	expired:bool,
-	handler:Handler,
-	then_handlers:Vec<Handler>,
-	error_handler:ErrorHandler
+	handler_index:usize,
+	handlers:Vec<Handler>,
+	error_handler:ErrorHandler,
+	finally:Vec<Handler>
 }
 impl Task {
 
@@ -27,9 +28,10 @@ impl Task {
 			name: name.to_string(),
 			event: Event::new(),
 			expired: false,
-			handler: Box::new(handler),
-			then_handlers: Vec::new(),
-			error_handler: Box::new(|_, error| eprintln!("{error}")) // Ensures that all other tasks continue as scheduled.
+			handler_index: 0,
+			handlers: vec![Box::new(handler)],
+			error_handler: Box::new(|_, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
+			finally: Vec::new()
 		}
 	}
 
@@ -39,9 +41,15 @@ impl Task {
 		self
 	}
 
-	/// Return self with an afterwards handler.
+	/// Return self with a new handler that executes after the previous one has expired.
 	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
-		self.then_handlers.push(Box::new(handler));
+		self.handlers.push(Box::new(handler));
+		self
+	}
+
+	/// Return self with a new handler that executes once the entire task has finished or expired.
+	pub fn finally<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
+		self.finally.push(Box::new(handler));
 		self
 	}
 
@@ -73,18 +81,26 @@ impl Task {
 
 		// Run handlers.
 		self.event.repeat = false;
-		let result:HandlerResult = (self.handler)(&mut self.event);
+		let result:HandlerResult = (self.handlers[self.handler_index])(&mut self.event);
 		if let Err(error) = result {
 			(self.error_handler)(&mut self.event, error);
+			self.expired = true;
 		}
 
 		// If task should not repeat, switch to next handler or set as expired.
 		if !self.event.repeat {
-			if !self.then_handlers.is_empty() {
-				self.handler = self.then_handlers.remove(0);
-				self.event = Event::new();
-			} else {
+			self.event = Event::new();
+			self.handler_index += 1;
+			if self.handler_index >= self.handlers.len() {
 				self.expired = true;
+			}
+		}
+
+		// If expired, run finally handlers.
+		for handler in &self.finally {
+			let result:HandlerResult = handler(&mut self.event);
+			if let Err(error) = result {
+				(self.error_handler)(&mut self.event, error);
 			}
 		}
 	}

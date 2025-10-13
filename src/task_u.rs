@@ -34,6 +34,19 @@ mod test {
 	}
 
 	#[test]
+	fn test_finally_handlers_execute() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+
+		let mut task:Task = Task::new("test", |_| Ok(())).finally(|_| unsafe { MODIFICATION_CHECK = 1;  Ok(()) });
+		task.run();
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
+
+		let mut task:Task = Task::new("test", |_| Err("ERROR".into())).finally(|_| unsafe { MODIFICATION_CHECK = 2;  Ok(()) });
+		task.run();
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 2);
+	}
+
+	#[test]
 	fn test_expiration() {
 		let mut task:Task = Task::new("test", |_| Ok(())).then(|_| Ok(()));
 		task.run();
