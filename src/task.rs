@@ -15,7 +15,7 @@ pub struct Task {
 	expired:bool,
 	handler_index:usize,
 	handlers:Vec<Handler>,
-	error_handler:ErrorHandler,
+	catch_handler:ErrorHandler,
 	finally:Vec<Handler>
 }
 impl Task {
@@ -30,20 +30,20 @@ impl Task {
 			expired: false,
 			handler_index: 0,
 			handlers: vec![Box::new(handler)],
-			error_handler: Box::new(|_, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
+			catch_handler: Box::new(|_, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
 			finally: Vec::new()
 		}
-	}
-
-	/// Return self with a new error handler.
-	pub fn on_error<T>(mut self, handler:T) -> Self where T:Fn(&mut Event, Box<dyn Error>) + Send + 'static {
-		self.error_handler = Box::new(handler);
-		self
 	}
 
 	/// Return self with a new handler that executes after the previous one has expired.
 	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
 		self.handlers.push(Box::new(handler));
+		self
+	}
+
+	/// Return self with a new error handler.
+	pub fn catch<T>(mut self, handler:T) -> Self where T:Fn(&mut Event, Box<dyn Error>) + Send + 'static {
+		self.catch_handler = Box::new(handler);
 		self
 	}
 
@@ -83,7 +83,7 @@ impl Task {
 		self.event.repeat = false;
 		let result:HandlerResult = (self.handlers[self.handler_index])(&mut self.event);
 		if let Err(error) = result {
-			(self.error_handler)(&mut self.event, error);
+			(self.catch_handler)(&mut self.event, error);
 			self.expired = true;
 		}
 
@@ -100,7 +100,7 @@ impl Task {
 		for handler in &self.finally {
 			let result:HandlerResult = handler(&mut self.event);
 			if let Err(error) = result {
-				(self.error_handler)(&mut self.event, error);
+				(self.catch_handler)(&mut self.event, error);
 			}
 		}
 	}

@@ -16,7 +16,7 @@ mod test {
 	#[test]
 	fn test_error_handler_execute() {
 		static mut MODIFICATION_CHECK:u8 = 0;
-		let mut task:Task = Task::new("test", |_| unsafe { MODIFICATION_CHECK = 1; Err("".into()) }).on_error(|_, _| unsafe { MODIFICATION_CHECK = 2; });
+		let mut task:Task = Task::new("test", |_| unsafe { MODIFICATION_CHECK = 1; Err("".into()) }).catch(|_, _| unsafe { MODIFICATION_CHECK = 2; });
 		task.run();
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 2);
 	}
