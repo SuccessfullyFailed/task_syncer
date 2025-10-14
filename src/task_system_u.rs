@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-	use std::time::{Duration, Instant};
+	use std::time::{ Duration, Instant };
 	use crate::{ Task, TaskSystem };
 
 

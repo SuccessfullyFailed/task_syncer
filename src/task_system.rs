@@ -1,15 +1,21 @@
-use std::time::{ Duration, Instant };
+use std::{ sync::{ Mutex, MutexGuard }, time::{ Duration, Instant } };
 use crate::Task;
 
 
 
 const DEFAULT_INTERVAL:Duration = Duration::from_millis(1);
+type TaskName = String;
+enum TaskSystemModification { Add(Task), Remove(TaskName) }
 
 
 
 pub struct TaskSystem {
 	tasks:Vec<Task>,
 	interval:Duration,
+
+	// Running the system only once at a time and keeping a mutexed modifications queue ensures 'tasks' property can be used without locking.
+	run_lock:Mutex<bool>,
+	modifications_queue:Mutex<Vec<TaskSystemModification>>,
 
 	#[cfg(test)]
 	pub(crate) system_loops:usize
@@ -23,6 +29,9 @@ impl TaskSystem {
 		TaskSystem {
 			tasks: Vec::new(),
 			interval: DEFAULT_INTERVAL,
+
+			run_lock: Mutex::new(false),
+			modifications_queue: Mutex::new(Vec::new()),
 
 			#[cfg(test)]
 			system_loops: usize::MAX
@@ -42,9 +51,14 @@ impl TaskSystem {
 
 	/* TASK METHODS */
 
-	/// Add a task to the system.
+	/// Add a task to the system. Does not immediately add it, but puts a request in the queue that adds it on the first run.
 	pub fn add_task(&mut self, task:Task) {
-		self.tasks.push(task);
+		self.modifications_queue.lock().unwrap().push(TaskSystemModification::Add(task));
+	}
+
+	/// Remove a task by name from the system. Does not immediately remove it, but puts a request in the queue that adds it on the first run.
+	pub fn remove_task(&mut self, task_name:TaskName) {
+		self.modifications_queue.lock().unwrap().push(TaskSystemModification::Remove(task_name));
 	}
 
 
@@ -57,11 +71,20 @@ impl TaskSystem {
 	}
 
 	/// Run the system while the given statement is true.
-	pub fn run_while<T>(&mut self, a:T) where T:Fn(&TaskSystem) -> bool {
+	pub fn run_while<T>(&mut self, condition:T) where T:Fn(&TaskSystem) -> bool {
 		use std::thread::sleep;
 
+		// Get run lock.
+		let mut run_lock_handle:MutexGuard<'_, bool> = self.run_lock.lock().unwrap();
+		if *run_lock_handle {
+			eprintln!("Could not run task_system, can only run once at a time.");
+		}
+		*run_lock_handle = true;
+		drop(run_lock_handle);
+
+		// Run while condition is true.
 		let mut loop_start:Instant = Instant::now();
-		while a(self) {
+		while condition(self) {
 			let next_iteration_target:Instant = loop_start + self.interval;
 
 			// Update tasks.
@@ -84,14 +107,35 @@ impl TaskSystem {
 				}
 			}
 		}
+
+		// Release run lock.
+		*self.run_lock.lock().unwrap() = false;
 	}
 
 	/// Update all tasks once.
 	pub fn run_once(&mut self, now:&Instant) {
+			
+		// Handle modifications.
+		let modifications:Vec<TaskSystemModification> = self.modifications_queue.lock().unwrap().drain(..).collect();
+		for modification in modifications {
+			self.handle_modification(modification);
+		}
+
+		// Run all tasks.
 		for task in self.tasks.iter_mut().filter(|task| task.should_run(now)) {
 			task.run();
 		}
+
+		// Remove expired tasks.
 		self.tasks.retain(|task| !task.expired());
+	}
+
+	/// Handle a single modification.
+	fn handle_modification(&mut self, modification:TaskSystemModification) {
+		match modification {
+			TaskSystemModification::Add(task) => self.tasks.push(task),
+			TaskSystemModification::Remove(task_name) => self.tasks.retain(|task| task.name() != task_name)
+		}
 	}
 
 	/// Pause the system. Stores the current time and adds the paused time to the tasks' trigger timer upon resume.
