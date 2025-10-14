@@ -133,8 +133,25 @@ impl TaskSystem {
 	/// Handle a single modification.
 	fn handle_modification(&mut self, modification:TaskSystemModification) {
 		match modification {
-			TaskSystemModification::Add(task) => self.tasks.push(task),
-			TaskSystemModification::Remove(task_name) => self.tasks.retain(|task| task.name() != task_name)
+			TaskSystemModification::Add(task) => {
+				match task.duplicate_handler() {
+					crate::DuplicateHandler::KeepAll => {
+						self.tasks.push(task);
+					},
+					crate::DuplicateHandler::KeepOld => {
+						if self.tasks.iter().find(|existing_task| existing_task.name() == task.name()).is_none() {
+							self.tasks.push(task);
+						}
+					},
+					crate::DuplicateHandler::KeepNew => {
+						self.handle_modification(TaskSystemModification::Remove(task.name().to_string()));
+						self.tasks.push(task);
+					}
+				}
+			},
+			TaskSystemModification::Remove(task_name) => {
+				self.tasks.retain(|task| task.name() != task_name)
+			}
 		}
 	}
 

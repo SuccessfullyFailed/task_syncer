@@ -6,13 +6,18 @@ use crate::Event;
 pub type HandlerResult = Result<(), Box<dyn Error>>;
 pub type Handler = Box<dyn Fn(&mut Event) -> HandlerResult + Send>;
 pub type ErrorHandler = Box<dyn Fn(&mut Event, Box<dyn Error>) + Send>;
+pub enum DuplicateHandler { KeepAll, KeepOld, KeepNew }
+const DEFAULT_DUPLICATE_HANDLER:DuplicateHandler = DuplicateHandler::KeepAll;
 
 
 
 pub struct Task {
 	name:String,
+	duplicate_handler:DuplicateHandler,
+
 	event:Event,
 	expired:bool,
+
 	handler_index:usize,
 	handlers:Vec<Handler>,
 	catch_handler:ErrorHandler,
@@ -26,13 +31,22 @@ impl Task {
 	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
 		Task {
 			name: name.to_string(),
+			duplicate_handler: DEFAULT_DUPLICATE_HANDLER,
+
 			event: Event::new(),
 			expired: false,
+
 			handler_index: 0,
 			handlers: vec![Box::new(handler)],
 			catch_handler: Box::new(|_, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
 			finally: Vec::new()
 		}
+	}
+
+	/// Return self with a duplicate handler.
+	pub fn with_duplicate_handler(mut self, duplicate_handler:DuplicateHandler) -> Self {
+		self.duplicate_handler = duplicate_handler;
+		self
 	}
 
 	/// Return self with a new handler that executes after the previous one has expired.
@@ -60,6 +74,11 @@ impl Task {
 	/// The name of the task.
 	pub fn name(&self) -> &str {
 		&self.name
+	}
+
+	/// Get the duplicate handler of the task.
+	pub fn duplicate_handler(&self) -> &DuplicateHandler {
+		&self.duplicate_handler
 	}
 
 	/// Wether or not the task is expired.
