@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 	use crate::{ DuplicateHandler, Task, TaskSystem };
-	use std::time::{ Duration, Instant };
+	use std::{thread::{self, sleep}, time::{ Duration, Instant }};
 
 
 
@@ -181,5 +181,36 @@ mod tests {
 		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
 		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 5);
+	}
+
+	#[test]
+	#[allow(static_mut_refs)]
+	fn test_cannot_run_twice() {
+		static mut SYSTEM:TaskSystem = TaskSystem::new();
+		static mut MODIFICATION_CHECK:u8 = 0;
+		static mut TIMER:u8 = 0;
+		
+		unsafe {
+			SYSTEM.add_task(Task::new("test", |_| { MODIFICATION_CHECK += 1; Ok(()) }));
+
+			// Launch the task in a bunch of threads.
+			for _ in 0..10 {
+				thread::spawn(|| SYSTEM.run_once(&Instant::now()));
+				thread::spawn(||
+					SYSTEM.run_while(|_| {
+						if TIMER < 100 {
+							TIMER += 1;
+							true
+						} else {
+							false
+						}
+					})
+				);
+			}
+
+			// Make sure that after running all threads, the event has only run once.
+			sleep(Duration::from_millis(100));
+			assert_eq!(MODIFICATION_CHECK, 1);
+		}
 	}
 }

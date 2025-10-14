@@ -25,7 +25,7 @@ impl TaskSystem {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new TaskSystem.
-	pub fn new() -> TaskSystem {
+	pub const fn new() -> TaskSystem {
 		TaskSystem {
 			tasks: Vec::new(),
 			interval: DEFAULT_INTERVAL,
@@ -112,9 +112,27 @@ impl TaskSystem {
 		*self.run_lock.lock().unwrap() = false;
 	}
 
-	/// Update all tasks once.
+	/// Get a run lock and update all tasks once.
 	pub fn run_once(&mut self, now:&Instant) {
-			
+
+		// Get run lock.
+		let mut run_lock_handle:MutexGuard<'_, bool> = self.run_lock.lock().unwrap();
+		if *run_lock_handle {
+			eprintln!("Could not run task_system, can only run once at a time.");
+		}
+		*run_lock_handle = true;
+		drop(run_lock_handle);
+
+		// Inner run function.
+		self.inner_run_once(now);
+
+		// Release run lock.
+		*self.run_lock.lock().unwrap() = false;
+	}
+
+	/// Update all tasks once. Assumes the run lock has already been locked.
+	fn inner_run_once(&mut self, now:&Instant) {
+
 		// Handle modifications.
 		let modifications:Vec<TaskSystemModification> = self.modifications_queue.lock().unwrap().drain(..).collect();
 		for modification in modifications {
