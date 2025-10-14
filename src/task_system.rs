@@ -75,12 +75,9 @@ impl TaskSystem {
 		use std::thread::sleep;
 
 		// Get run lock.
-		let mut run_lock_handle:MutexGuard<'_, bool> = self.run_lock.lock().unwrap();
-		if *run_lock_handle {
-			eprintln!("Could not run task_system, can only run once at a time.");
+		if !self.get_run_lock() {
+			return;
 		}
-		*run_lock_handle = true;
-		drop(run_lock_handle);
 
 		// Run while condition is true.
 		let mut loop_start:Instant = Instant::now();
@@ -109,27 +106,16 @@ impl TaskSystem {
 		}
 
 		// Release run lock.
-		*self.run_lock.lock().unwrap() = false;
+		self.release_run_lock();
 	}
 
 	/// Get a run lock and update all tasks once.
 	pub fn run_once(&mut self, now:&Instant) {
-
-		// Get run lock.
-		let mut run_lock_handle:MutexGuard<'_, bool> = self.run_lock.lock().unwrap();
-		if *run_lock_handle {
-			eprintln!("Could not run task_system, can only run once at a time.");
-		}
-		*run_lock_handle = true;
-		drop(run_lock_handle);
-
-		// Inner run function.
+		if !self.get_run_lock() { return; }
 		self.inner_run_once(now);
-
-		// Release run lock.
-		*self.run_lock.lock().unwrap() = false;
+		self.release_run_lock();
 	}
-
+	
 	/// Update all tasks once. Assumes the run lock has already been locked.
 	fn inner_run_once(&mut self, now:&Instant) {
 
@@ -186,5 +172,22 @@ impl TaskSystem {
 		for task in &mut self.tasks {
 			task.resume();
 		}
+	}
+
+	/// Get a run lock.
+	fn get_run_lock(&self) -> bool {
+		let mut run_lock_handle:MutexGuard<'_, bool> = self.run_lock.lock().unwrap();
+		if *run_lock_handle {
+			eprintln!("Could not run task_system, can only run once at a time.");
+			false
+		} else {
+			*run_lock_handle = true;
+			true
+		}
+	}
+
+	/// Release the run lock.
+	fn release_run_lock(&self) {
+		*self.run_lock.lock().unwrap() = false;
 	}
 }
