@@ -131,6 +131,13 @@ impl TaskSystem {
 		self.tasks.retain(|task| !task.expired());
 	}
 
+	/// Run a single given task once. Does not check if the task should be ran.
+	pub fn run_task_once(&mut self, task:&mut Task) {
+		if !self.get_run_lock() { return; }
+		task.run(&self.task_scheduler);
+		self.release_run_lock();
+	}
+
 	/// Handle a single modification.
 	fn handle_modification(&mut self, modification:TaskSystemModification) {
 		match modification {

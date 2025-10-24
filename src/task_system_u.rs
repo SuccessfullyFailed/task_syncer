@@ -212,4 +212,37 @@ mod tests {
 			assert_eq!(MODIFICATION_CHECK, 1);
 		}
 	}
+
+	#[test]
+	fn test_run_single_task() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+
+		// Create some debug tasks.
+		let mut task_system:TaskSystem = TaskSystem::new();
+		task_system.run_task_once(&mut Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }));
+		task_system.system_loops = 1;
+		task_system.run();
+
+		// Validate task was executed.
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
+	}
+
+	#[test]
+	fn test_single_task_can_mod_scheduler() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+
+		// Create some debug tasks.
+		let mut task_system:TaskSystem = TaskSystem::new();
+		task_system.run_task_once(&mut Task::new("test", |scheduler, _| {
+			scheduler.add_task(Task::new("sub_1", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }));
+			scheduler.add_task(Task::new("sub_2", |_, _| unsafe { MODIFICATION_CHECK = 2; Ok(()) }));
+			scheduler.remove_task("sub_2");
+			Ok(())
+		}));
+		task_system.system_loops = 3;
+		task_system.run();
+
+		// Validate task was executed.
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
+	}
 }
