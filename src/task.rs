@@ -1,11 +1,11 @@
 use std::{ error::Error, time::{ Duration, Instant } };
-use crate::Event;
+use crate::{Event, TaskScheduler};
 
 
 
 pub type HandlerResult = Result<(), Box<dyn Error>>;
-pub type Handler = Box<dyn Fn(&mut Event) -> HandlerResult + Send>;
-pub type ErrorHandler = Box<dyn Fn(&mut Event, Box<dyn Error>) + Send>;
+pub type Handler = Box<dyn Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send>;
+pub type ErrorHandler = Box<dyn Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send>;
 pub enum DuplicateHandler { KeepAll, KeepOld, KeepNew }
 const DEFAULT_DUPLICATE_HANDLER:DuplicateHandler = DuplicateHandler::KeepAll;
 
@@ -28,7 +28,7 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
+	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
 		Task {
 			name: name.to_string(),
 			duplicate_handler: DEFAULT_DUPLICATE_HANDLER,
@@ -38,7 +38,7 @@ impl Task {
 
 			handler_index: 0,
 			handlers: vec![Box::new(handler)],
-			catch_handler: Box::new(|_, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
+			catch_handler: Box::new(|_, _, error| eprintln!("{error}")), // Ensures that all other tasks continue as scheduled.
 			finally: Vec::new()
 		}
 	}
@@ -50,19 +50,19 @@ impl Task {
 	}
 
 	/// Return self with a new handler that executes after the previous one has expired.
-	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
+	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
 		self.handlers.push(Box::new(handler));
 		self
 	}
 
 	/// Return self with a new error handler.
-	pub fn catch<T>(mut self, handler:T) -> Self where T:Fn(&mut Event, Box<dyn Error>) + Send + 'static {
+	pub fn catch<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + 'static {
 		self.catch_handler = Box::new(handler);
 		self
 	}
 
 	/// Return self with a new handler that executes once the entire task has finished or expired.
-	pub fn finally<T>(mut self, handler:T) -> Self where T:Fn(&mut Event) -> HandlerResult + Send + 'static {
+	pub fn finally<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
 		self.finally.push(Box::new(handler));
 		self
 	}
@@ -96,13 +96,13 @@ impl Task {
 	/* USAGE METHODS */
 
 	/// Run the task.
-	pub(crate) fn run(&mut self) {
+	pub(crate) fn run(&mut self, task_scheduler:&TaskScheduler) {
 
 		// Run handlers.
 		self.event.repeat = false;
-		let result:HandlerResult = (self.handlers[self.handler_index])(&mut self.event);
+		let result:HandlerResult = (self.handlers[self.handler_index])(task_scheduler, &mut self.event);
 		if let Err(error) = result {
-			(self.catch_handler)(&mut self.event, error);
+			(self.catch_handler)(task_scheduler, &mut self.event, error);
 			self.expired = true;
 		}
 
@@ -117,9 +117,9 @@ impl Task {
 
 		// If expired, run finally handlers.
 		for handler in &self.finally {
-			let result:HandlerResult = handler(&mut self.event);
+			let result:HandlerResult = handler(task_scheduler, &mut self.event);
 			if let Err(error) = result {
-				(self.catch_handler)(&mut self.event, error);
+				(self.catch_handler)(task_scheduler, &mut self.event, error);
 			}
 		}
 	}

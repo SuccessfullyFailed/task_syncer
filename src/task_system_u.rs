@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
+	use std::{ thread::{ self, sleep }, time::{ Duration, Instant } };
 	use crate::{ DuplicateHandler, Task, TaskSystem };
-	use std::{thread::{self, sleep}, time::{ Duration, Instant }};
 
 
 
 	const NO_DURATION:Duration = Duration::from_millis(0);
-
 
 
 
@@ -16,7 +15,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = true; Ok(()) }));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = true; Ok(()) }));
 		task_system.system_loops = 1;
 		task_system.run();
 
@@ -30,7 +29,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |event| unsafe { MODIFICATION_CHECK += 1; event.reschedule(NO_DURATION) }));
+		task_system.add_task(Task::new("test", |_, event| unsafe { MODIFICATION_CHECK += 1; event.reschedule(NO_DURATION) }));
 		task_system.system_loops = 20;
 		task_system.run();
 
@@ -44,7 +43,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |event| unsafe {
+		task_system.add_task(Task::new("test", |_, event| unsafe {
 			MODIFICATION_CHECK += 1;
 			if MODIFICATION_CHECK < 20 {
 				event.reschedule(NO_DURATION)
@@ -65,7 +64,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |event| unsafe {
+		task_system.add_task(Task::new("test", |_, event| unsafe {
 			MODIFICATION_CHECK += 1;
 			if MODIFICATION_CHECK < 20 {
 				event.reschedule(NO_DURATION)
@@ -90,7 +89,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |event| unsafe {
+		task_system.add_task(Task::new("test", |_, event| unsafe {
 			MODIFICATION_CHECK += 1;
 			event.reschedule(NO_DURATION)
 		}));
@@ -114,7 +113,7 @@ mod tests {
 
 		// Create some debug tasks.
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |event| unsafe {
+		task_system.add_task(Task::new("test", |_, event| unsafe {
 			MODIFICATION_CHECK += 1;
 			if MODIFICATION_CHECK < 20 {
 				event.reschedule(INTERVAL)
@@ -149,36 +148,36 @@ mod tests {
 		// Keep all.
 		unsafe { MODIFICATION_CHECK = 0; }
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
 		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 3);
 
 		// Keep old.
 		unsafe { MODIFICATION_CHECK = 0; }
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
 		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
 
 		// Keep new.
 		unsafe { MODIFICATION_CHECK = 0; }
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
 		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 3);
 
 		// Mixed.
 		unsafe { MODIFICATION_CHECK = 0; }
 		let mut task_system:TaskSystem = TaskSystem::new();
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
-		task_system.add_task(Task::new("test", |_| unsafe { MODIFICATION_CHECK += 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
+		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
 		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 5);
 	}
@@ -191,7 +190,7 @@ mod tests {
 		static mut TIMER:u8 = 0;
 		
 		unsafe {
-			SYSTEM.add_task(Task::new("test", |_| { MODIFICATION_CHECK += 1; Ok(()) }));
+			SYSTEM.add_task(Task::new("test", |_, _| { MODIFICATION_CHECK += 1; Ok(()) }));
 
 			// Launch the task in a bunch of threads.
 			for _ in 0..10 {

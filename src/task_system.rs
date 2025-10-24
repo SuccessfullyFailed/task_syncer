@@ -1,11 +1,9 @@
 use std::{ sync::{ Mutex, MutexGuard }, time::{ Duration, Instant } };
-use crate::Task;
+use crate::{ Task, TaskScheduler, TaskSystemModification };
 
 
 
 const DEFAULT_INTERVAL:Duration = Duration::from_millis(1);
-type TaskName = String;
-enum TaskSystemModification { Add(Task), Remove(TaskName) }
 
 
 
@@ -13,9 +11,9 @@ pub struct TaskSystem {
 	tasks:Vec<Task>,
 	interval:Duration,
 
-	// Running the system only once at a time and keeping a mutexed modifications queue ensures 'tasks' property can be used without locking.
+	// Running the system only once at a time and keeping a mutexed modifications queue (inside TaskScheduler) ensures 'tasks' property can be used without locking.
 	run_lock:Mutex<bool>,
-	modifications_queue:Mutex<Vec<TaskSystemModification>>,
+	task_scheduler:TaskScheduler,
 
 	#[cfg(test)]
 	pub(crate) system_loops:usize
@@ -31,7 +29,7 @@ impl TaskSystem {
 			interval: DEFAULT_INTERVAL,
 
 			run_lock: Mutex::new(false),
-			modifications_queue: Mutex::new(Vec::new()),
+			task_scheduler: TaskScheduler::new(),
 
 			#[cfg(test)]
 			system_loops: usize::MAX
@@ -53,12 +51,12 @@ impl TaskSystem {
 
 	/// Add a task to the system. Does not immediately add it, but puts a request in the queue that adds it on the first run.
 	pub fn add_task(&mut self, task:Task) {
-		self.modifications_queue.lock().unwrap().push(TaskSystemModification::Add(task));
+		self.task_scheduler.add_task(task);
 	}
 
 	/// Remove a task by name from the system. Does not immediately remove it, but puts a request in the queue that adds it on the first run.
-	pub fn remove_task(&mut self, task_name:TaskName) {
-		self.modifications_queue.lock().unwrap().push(TaskSystemModification::Remove(task_name));
+	pub fn remove_task(&mut self, task_name:&str) {
+		self.task_scheduler.remove_task(task_name);
 	}
 
 
@@ -85,7 +83,7 @@ impl TaskSystem {
 			let next_iteration_target:Instant = loop_start + self.interval;
 
 			// Update tasks.
-			self.run_once(&loop_start);
+			self.inner_run_once(&loop_start);
 
 			// Await interval.
 			let loop_end:Instant = Instant::now();
@@ -120,14 +118,13 @@ impl TaskSystem {
 	fn inner_run_once(&mut self, now:&Instant) {
 
 		// Handle modifications.
-		let modifications:Vec<TaskSystemModification> = self.modifications_queue.lock().unwrap().drain(..).collect();
-		for modification in modifications {
+		for modification in self.task_scheduler.drain() {
 			self.handle_modification(modification);
 		}
 
 		// Run all tasks.
 		for task in self.tasks.iter_mut().filter(|task| task.should_run(now)) {
-			task.run();
+			task.run(&self.task_scheduler);
 		}
 
 		// Remove expired tasks.
