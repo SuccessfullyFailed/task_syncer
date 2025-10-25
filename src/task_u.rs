@@ -37,13 +37,17 @@ mod test {
 	fn test_finally_handlers_execute() {
 		static mut MODIFICATION_CHECK:u8 = 0;
 
-		let mut task:Task = Task::new("test", |_, _| Ok(())).finally(|_, _| unsafe { MODIFICATION_CHECK = 1;  Ok(()) });
+		let mut task:Task = Task::new("test", |_, event| { event.repeat(); Ok(()) }).finally(|_, _| unsafe { MODIFICATION_CHECK = 1;  Ok(()) });
 		task.run(&TaskScheduler::new());
-		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 0);
 
-		let mut task:Task = Task::new("test", |_, _| Err("ERROR".into())).finally(|_, _| unsafe { MODIFICATION_CHECK = 2;  Ok(()) });
+		let mut task:Task = Task::new("test", |_, _| Ok(())).finally(|_, _| unsafe { MODIFICATION_CHECK = 2;  Ok(()) });
 		task.run(&TaskScheduler::new());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 2);
+
+		let mut task:Task = Task::new("test", |_, _| Err("ERROR".into())).finally(|_, _| unsafe { MODIFICATION_CHECK = 3;  Ok(()) });
+		task.run(&TaskScheduler::new());
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 3);
 	}
 
 	#[test]

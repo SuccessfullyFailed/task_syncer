@@ -116,10 +116,12 @@ impl Task {
 		}
 
 		// If expired, run finally handlers.
-		for handler in &self.finally {
-			let result:HandlerResult = handler(task_scheduler, &mut self.event);
-			if let Err(error) = result {
-				(self.catch_handler)(task_scheduler, &mut self.event, error);
+		if self.expired {
+			for handler in &self.finally {
+				let result:HandlerResult = handler(task_scheduler, &mut self.event);
+				if let Err(error) = result {
+					(self.catch_handler)(task_scheduler, &mut self.event, error);
+				}
 			}
 		}
 	}
