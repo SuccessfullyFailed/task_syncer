@@ -47,7 +47,12 @@ impl TaskSystem {
 
 
 
-	/* TASK METHODS */
+	/* TASK SCHEDULING METHODS */
+
+	/// Get a reference to the task scheduler.
+	pub fn task_scheduler(&self) -> &TaskScheduler {
+		&self.task_scheduler
+	}
 
 	/// Add a task to the system. Does not immediately add it, but puts a request in the queue that adds it on the first run.
 	pub fn add_task(&mut self, task:Task) {
