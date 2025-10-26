@@ -33,13 +33,16 @@ mod tests {
 		
 		// Check no activation on incorrect triggers.
 		let now:Instant = Instant::now();
-		task_system.run_once(&now, &mut vec![]);
-		task_system.run_once(&now, &mut vec!["test".to_string()]);
-		task_system.run_once(&now, &mut vec!["test_evt_b".to_string()]);
+		task_system.run_once(&now);
+		task_system.trigger_event("test");
+		task_system.run_once(&now);
+		task_system.trigger_event("test_evt_b");
+		task_system.run_once(&now);
 		assert!(unsafe { !MODIFICATION_CHECK });
 
 		// Check activation on correct trigger.
-		task_system.run_once(&now, &mut vec!["a".to_string(), String::new(), "test_evt".to_string()]);
+		task_system.trigger_event("test_evt");
+		task_system.run_once(&now);
 		assert!(unsafe { MODIFICATION_CHECK });
 	}
 
@@ -155,7 +158,7 @@ mod tests {
 
 		// Resume system.
 		task_system.resume();
-		task_system.run_once(&Instant::now(), &mut Vec::new());
+		task_system.run_once(&Instant::now());
 		let end_time:Instant = Instant::now() + INTERVAL * 10;
 		task_system.run_while(|_| Instant::now() < end_time);
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 20);
@@ -171,7 +174,7 @@ mod tests {
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
-		task_system.run_once(&Instant::now(), &mut Vec::new());
+		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 3);
 
 		// Keep old.
@@ -180,7 +183,7 @@ mod tests {
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
-		task_system.run_once(&Instant::now(), &mut Vec::new());
+		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
 
 		// Keep new.
@@ -189,7 +192,7 @@ mod tests {
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK = 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
-		task_system.run_once(&Instant::now(), &mut Vec::new());
+		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 3);
 
 		// Mixed.
@@ -198,7 +201,7 @@ mod tests {
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 1; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepOld));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 2; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepNew));
 		task_system.add_task(Task::new("test", |_, _| unsafe { MODIFICATION_CHECK += 3; Ok(()) }).with_duplicate_handler(DuplicateHandler::KeepAll));
-		task_system.run_once(&Instant::now(), &mut Vec::new());
+		task_system.run_once(&Instant::now());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 5);
 	}
 
@@ -214,7 +217,7 @@ mod tests {
 
 			// Launch the task in a bunch of threads.
 			for _ in 0..10 {
-				thread::spawn(|| SYSTEM.run_once(&Instant::now(), &mut Vec::new()));
+				thread::spawn(|| SYSTEM.run_once(&Instant::now()));
 				thread::spawn(||
 					SYSTEM.run_while(|_| {
 						if TIMER < 100 {
