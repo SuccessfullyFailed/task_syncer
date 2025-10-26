@@ -4,8 +4,8 @@ use std::{ error::Error, time::Instant };
 
 
 type HandlerResult = Result<(), Box<dyn Error>>;
-type Handler = Box<dyn Fn(&TaskScheduler) -> HandlerResult + Send>;
-type ErrorHandler = Box<dyn Fn(&TaskScheduler, Box<dyn Error>) + Send>;
+type Handler = Box<dyn Fn(&TaskScheduler) -> HandlerResult + Send + Sync >;
+type ErrorHandler = Box<dyn Fn(&TaskScheduler, Box<dyn Error>) + Send + Sync >;
 
 
 
@@ -20,7 +20,7 @@ pub struct EventSubscription {
 impl EventSubscription {
 
 	/// Create a new task.
-	pub fn new<T>(name:&str, event_name:&str, handler:T) -> EventSubscription where T:Fn(&TaskScheduler) -> HandlerResult + Send + 'static {
+	pub fn new<T:Fn(&TaskScheduler) -> HandlerResult + Send + Sync  + 'static>(name:&str, event_name:&str, handler:T) -> EventSubscription {
 		EventSubscription {
 			name: name.to_string(),
 			event_name: event_name.to_string(),
@@ -38,7 +38,7 @@ impl EventSubscription {
 	}
 
 	/// Return self with a new error handler.
-	pub fn catch<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, Box<dyn Error>) + Send + 'static {
+	pub fn catch<T:Fn(&TaskScheduler, Box<dyn Error>) + Send + Sync  + 'static>(mut self, handler:T) -> Self {
 		self.catch_handler = Box::new(handler);
 		self
 	}

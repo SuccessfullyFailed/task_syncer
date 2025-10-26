@@ -4,8 +4,8 @@ use std::{ error::Error, time::{ Duration, Instant } };
 
 
 type HandlerResult = Result<(), Box<dyn Error>>;
-type Handler = Box<dyn Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send>;
-type ErrorHandler = Box<dyn Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send>;
+type Handler = Box<dyn Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync >;
+type ErrorHandler = Box<dyn Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + Sync >;
 
 
 
@@ -26,7 +26,7 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<T>(name:&str, handler:T) -> Task where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
+	pub fn new<T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync + 'static>(name:&str, handler:T) -> Task {
 		Task {
 			name: name.to_string(),
 			duplicate_handler: DEFAULT_DUPLICATE_HANDLER,
@@ -48,19 +48,19 @@ impl Task {
 	}
 
 	/// Return self with a new handler that executes after the previous one has expired.
-	pub fn then<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
+	pub fn then<T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync  + 'static>(mut self, handler:T) -> Self {
 		self.handlers.push(Box::new(handler));
 		self
 	}
 
 	/// Return self with a new error handler.
-	pub fn catch<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + 'static {
+	pub fn catch<T:Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + Sync  + 'static>(mut self, handler:T) -> Self {
 		self.catch_handler = Box::new(handler);
 		self
 	}
 
 	/// Return self with a new handler that executes once the entire task has finished or expired.
-	pub fn finally<T>(mut self, handler:T) -> Self where T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + 'static {
+	pub fn finally<T:Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync  + 'static>(mut self, handler:T) -> Self {
 		self.finally.push(Box::new(handler));
 		self
 	}

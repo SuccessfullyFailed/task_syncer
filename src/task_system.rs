@@ -8,7 +8,7 @@ const DEFAULT_INTERVAL:Duration = Duration::from_millis(1);
 
 
 pub struct TaskSystem {
-	tasks:Vec<Box<dyn TaskLike>>,
+	tasks:Vec<Box<dyn TaskLike + Send + Sync>>,
 	interval:Duration,
 
 	// Running the system only once at a time and keeping a mutexed modifications queue (inside TaskScheduler) ensures 'tasks' property can be used without locking.
@@ -55,7 +55,7 @@ impl TaskSystem {
 	}
 
 	/// Add a task to the system. Does not immediately add it, but puts a request in the queue that adds it on the first run.
-	pub fn add_task<T:TaskLike + 'static>(&mut self, task:T) {
+	pub fn add_task<T:TaskLike + Send + Sync + 'static>(&mut self, task:T) {
 		self.task_scheduler.add_task(task);
 	}
 
@@ -74,7 +74,7 @@ impl TaskSystem {
 	}
 
 	/// Run the system while the given statement is true.
-	pub fn run_while<T>(&mut self, condition:T) where T:Fn(&TaskSystem) -> bool {
+	pub fn run_while<T:Fn(&TaskSystem) -> bool>(&mut self, condition:T) {
 		use std::thread::sleep;
 
 		// Get run lock.

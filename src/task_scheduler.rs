@@ -3,7 +3,7 @@ use crate::TaskLike;
 
 
 
-pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike>), Remove(String), TriggerEvent(String) }
+pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike + Send + Sync>), Remove(String), TriggerEvent(String) }
 
 
 
@@ -21,7 +21,7 @@ impl TaskScheduler {
 	}
 
 	/// Add a task to the system. Does not immediately add it, but puts a request in the queue that adds it on the next update of the system.
-	pub fn add_task<T:TaskLike + 'static>(&self, task:T) {
+	pub fn add_task<T:TaskLike + Send + Sync + 'static>(&self, task:T) {
 		self.add_modification(TaskSystemModification::Add(Box::new(task)));
 	}
 
