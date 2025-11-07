@@ -1,9 +1,9 @@
+use crate::{ TaskLike, TaskType };
 use std::sync::Mutex;
-use crate::TaskLike;
 
 
 
-pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike + Send + Sync>), Remove(String), TriggerEvent(String) }
+pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike + Send + Sync>), RetainTasks(Box<dyn Fn(&dyn TaskLike) -> bool>), TriggerEvent(String) }
 
 
 
@@ -25,9 +25,20 @@ impl TaskScheduler {
 		self.add_modification(TaskSystemModification::Add(Box::new(task)));
 	}
 
+	/// Retain tasks by the given filter. Does not immediately remove them, but puts a request in the queue that adds it on the next update of the system.
+	pub fn retain_tasks<T:Fn(&dyn TaskLike) -> bool + Send + Sync + 'static>(&self, filter:T) {
+		self.add_modification(TaskSystemModification::RetainTasks(Box::new(filter)));
+	}
+
 	/// Remove a task by name from the system. Does not immediately remove it, but puts a request in the queue that adds it on the next update of the system.
 	pub fn remove_task(&self, task_name:&str) {
-		self.add_modification(TaskSystemModification::Remove(task_name.to_string()));
+		let task_name:String = task_name.to_string();
+		self.retain_tasks(move |task| task.name() != task_name);
+	}
+
+	/// Remove all scheduled tasks. Keeps subscription tasks. Does not immediately trigger it, but puts a request in the queue that triggers it on the next update of the system.
+	pub fn remove_scheduled_tasks(&self) {
+		self.retain_tasks(move |task| task.task_type() != TaskType::Task);
 	}
 
 	/// Trigger an event, activating all its subscriptions. Does not immediately trigger it, but puts a request in the queue that triggers it on the next update of the system.

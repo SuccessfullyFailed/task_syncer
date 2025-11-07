@@ -1,4 +1,4 @@
-use crate::{ DuplicateHandler, TaskLike, TaskScheduler, DEFAULT_DUPLICATE_HANDLER };
+use crate::{ DEFAULT_DUPLICATE_HANDLER, DuplicateHandler, TaskLike, TaskScheduler, TaskType };
 use std::{ error::Error, time::Instant };
 
 
@@ -50,6 +50,11 @@ impl TaskLike for EventSubscription {
 	/// The name of the task.
 	fn name(&self) -> &str {
 		&self.name
+	}
+
+	/// The type-name of the task.
+	fn task_type(&self) -> TaskType {
+		TaskType::Subscription
 	}
 
 	/// Get the duplicate handler of the task.

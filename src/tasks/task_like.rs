@@ -3,6 +3,8 @@ use std::time::Instant;
 
 
 
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum TaskType { Task, Subscription }
 pub enum DuplicateHandler { KeepAll, KeepOld, KeepNew }
 pub const DEFAULT_DUPLICATE_HANDLER:DuplicateHandler = DuplicateHandler::KeepAll;
 
@@ -14,6 +16,9 @@ pub trait TaskLike {
 
 	/// The name of the task.
 	fn name(&self) -> &str;
+
+	/// The type-name of the task.
+	fn task_type(&self) -> TaskType;
 
 	/// Get the duplicate handler of the task.
 	fn duplicate_handler(&self) -> &DuplicateHandler;

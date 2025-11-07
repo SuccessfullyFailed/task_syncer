@@ -165,13 +165,14 @@ impl TaskSystem {
 						}
 					},
 					crate::DuplicateHandler::KeepNew => {
-						self.handle_modification(TaskSystemModification::Remove(task.name().to_string()));
+						let task_name:String = task.name().to_string();
+						self.handle_modification(TaskSystemModification::RetainTasks(Box::new(move |task| task.name() != task_name)));
 						self.tasks.push(task);
 					}
 				}
 			},
-			TaskSystemModification::Remove(task_name) => {
-				self.tasks.retain(|task| task.name() != task_name)
+			TaskSystemModification::RetainTasks(filter) => {
+				self.tasks.retain(|item| filter(&**item))
 			},
 			TaskSystemModification::TriggerEvent(event_name) => {
 				self.triggered_events.push(event_name);
