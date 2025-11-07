@@ -1,5 +1,5 @@
+use crate::{ DuplicateHandler, Task, TaskLike, TaskScheduler, TaskSystemModification };
 use std::{ sync::{ Mutex, MutexGuard }, time::{ Duration, Instant } };
-use crate::{ Task, TaskLike, TaskScheduler, TaskSystemModification };
 
 
 
@@ -156,15 +156,15 @@ impl TaskSystem {
 		match modification {
 			TaskSystemModification::Add(task) => {
 				match task.duplicate_handler() {
-					crate::DuplicateHandler::KeepAll => {
+					DuplicateHandler::KeepAll => {
 						self.tasks.push(task);
 					},
-					crate::DuplicateHandler::KeepOld => {
-						if self.tasks.iter().find(|existing_task| existing_task.name() == task.name()).is_none() {
+					DuplicateHandler::KeepOld => {
+						if !self.tasks.iter().any(|existing_task| existing_task.name() == task.name()) {
 							self.tasks.push(task);
 						}
 					},
-					crate::DuplicateHandler::KeepNew => {
+					DuplicateHandler::KeepNew => {
 						let task_name:String = task.name().to_string();
 						self.handle_modification(TaskSystemModification::RetainTasks(Box::new(move |task| task.name() != task_name)));
 						self.tasks.push(task);
@@ -211,5 +211,10 @@ impl TaskSystem {
 	/// Release the run lock.
 	fn release_run_lock(&self) {
 		*self.run_lock.lock().unwrap() = false;
+	}
+}
+impl Default for TaskSystem {
+	fn default() -> Self {
+		TaskSystem::new()
 	}
 }

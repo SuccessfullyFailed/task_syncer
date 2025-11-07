@@ -199,7 +199,7 @@ impl Event {
 	/// Pause the event. Stores the current time and adds the paused time to the trigger timer upon resume.
 	pub fn pause(&mut self, now:&Instant) {
 		if self.pause_time.is_none() {
-			self.pause_time = Some(now.clone());
+			self.pause_time = Some(*now);
 		}
 	}
 
@@ -209,5 +209,10 @@ impl Event {
 			self.target_instant += now.duration_since(pause_time);
 			self.pause_time = None;
 		}
+	}
+}
+impl Default for Event {
+	fn default() -> Self {
+		Event::new()
 	}
 }

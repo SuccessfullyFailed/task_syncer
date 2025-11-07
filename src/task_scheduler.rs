@@ -3,7 +3,11 @@ use std::sync::Mutex;
 
 
 
-pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike + Send + Sync>), RetainTasks(Box<dyn Fn(&dyn TaskLike) -> bool>), TriggerEvent(String) }
+type TaskRetainFilter = Box<dyn Fn(&dyn TaskLike) -> bool + Send + Sync + 'static>;
+
+
+
+pub(crate) enum TaskSystemModification { Add(Box<dyn TaskLike + Send + Sync + 'static>), RetainTasks(TaskRetainFilter), TriggerEvent(String) }
 
 
 
@@ -49,5 +53,10 @@ impl TaskScheduler {
 	/// Extract all requested modifications.
 	pub(crate) fn drain(&self) -> Vec<TaskSystemModification> {
 		self.0.lock().unwrap().drain(..).collect()
+	}
+}
+impl Default for TaskScheduler {
+	fn default() -> Self {
+		TaskScheduler::new()
 	}
 }
