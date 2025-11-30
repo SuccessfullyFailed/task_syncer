@@ -151,13 +151,13 @@ mod tests {
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 10);
 
 		// Pause system.
-		task_system.pause();
+		task_system.pause(&Instant::now());
 		let end_time:Instant = Instant::now() + INTERVAL * 10;
 		task_system.run_while(|_| Instant::now() < end_time);
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 10);
 
 		// Resume system.
-		task_system.resume();
+		task_system.resume(&Instant::now());
 		task_system.run_once(&Instant::now());
 		let end_time:Instant = Instant::now() + INTERVAL * 10;
 		task_system.run_while(|_| Instant::now() < end_time);

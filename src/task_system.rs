@@ -181,16 +181,14 @@ impl TaskSystem {
 	}
 
 	/// Pause the system. Stores the current time and adds the paused time to the tasks' trigger timer upon resume.
-	pub fn pause(&mut self) {
-		let now:Instant = Instant::now();
+	pub fn pause(&mut self, now:&Instant) {
 		for task in &mut self.tasks {
 			task.pause(&now);
 		}
 	}
 
 	/// Resume the event. Adds the paused time to the tasks' trigger timer.
-	pub fn resume(&mut self) {
-		let now:Instant = Instant::now();
+	pub fn resume(&mut self, now:&Instant) {
 		for task in &mut self.tasks {
 			task.resume(&now);
 		}
