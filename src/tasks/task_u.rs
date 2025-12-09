@@ -97,4 +97,25 @@ mod test {
 		assert!(!task.should_run(&(now + Duration::from_millis(250)), &[]));
 		assert!(task.should_run(&(now + Duration::from_millis(260)), &[]));
 	}
+
+	#[test]
+	fn test_duration_threshold() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+		
+		let mut task:Task = Task::new("test", |_, _| { sleep(Duration::from_millis(0)); Ok(()) }).with_execution_threshold(Duration::from_millis(25), |_, _| unsafe { MODIFICATION_CHECK += 1; });
+		task.run(&TaskScheduler::new());
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 0);
+		
+		let mut task:Task = Task::new("test", |_, _| { sleep(Duration::from_millis(15)); Ok(()) }).with_execution_threshold(Duration::from_millis(25), |_, _| unsafe { MODIFICATION_CHECK += 1; });
+		task.run(&TaskScheduler::new());
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 0);
+		
+		let mut task:Task = Task::new("test", |_, _| { sleep(Duration::from_millis(30)); Ok(()) }).with_execution_threshold(Duration::from_millis(25), |_, _| unsafe { MODIFICATION_CHECK += 1; });
+		task.run(&TaskScheduler::new());
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 1);
+		
+		let mut task:Task = Task::new("test", |_, _| { sleep(Duration::from_millis(50)); Ok(()) }).with_execution_threshold(Duration::from_millis(25), |_, _| unsafe { MODIFICATION_CHECK += 1; });
+		task.run(&TaskScheduler::new());
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 2);
+	}
 }
