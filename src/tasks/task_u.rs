@@ -145,4 +145,19 @@ mod test {
 		task.run(&TaskScheduler::new());
 		assert_eq!(unsafe { MODIFICATION_CHECK }, 2);
 	}
+
+	#[test]
+	#[allow(static_mut_refs)]
+	fn test_task_handler_event_run_index() {
+		static mut MODIFICATION_CHECK:usize = 0;
+		let mut task:Task = Task::new("test", |_, event| unsafe {
+			assert_eq!(event.run_index(), MODIFICATION_CHECK);
+			MODIFICATION_CHECK += 1;
+			event.repeat();
+			Ok(())
+		});
+		for _ in 0..25 {
+			task.run(&TaskScheduler::new());
+		}
+	}
 }

@@ -4,8 +4,8 @@ use std::{ error::Error, sync::Arc, time::{ Duration, Instant } };
 
 
 type HandlerResult = Result<(), Box<dyn Error>>;
-type Handler = Box<dyn Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync >;
-type ErrorHandler = Box<dyn Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + Sync >;
+type Handler = Box<dyn Fn(&TaskScheduler, &mut Event) -> HandlerResult + Send + Sync>;
+type ErrorHandler = Box<dyn Fn(&TaskScheduler, &mut Event, Box<dyn Error>) + Send + Sync>;
 
 
 
@@ -135,6 +135,7 @@ impl TaskLike for Task {
 				None => (self.handlers[self.handler_index])(task_scheduler, &mut self.event)
 			}
 		};
+		self.event.run_index += 1;
 
 		// Run error handler on error.
 		if let Err(error) = result {
@@ -184,6 +185,7 @@ impl TaskLike for Task {
 
 
 pub struct Event {
+	pub(crate) run_index:usize,
 	pub(crate) target_instant:Instant,
 	pub(crate) repeat:bool,
 	pub(crate) pause_time:Option<Instant>,
@@ -196,6 +198,7 @@ impl Event {
 	/// Create a new, empty default event.
 	pub fn new() -> Event {
 		Event {
+			run_index: 0,
 			target_instant: Instant::now(),
 			repeat: true,
 			pause_time: None,
@@ -247,6 +250,11 @@ impl Event {
 			self.target_instant += now.duration_since(pause_time);
 			self.pause_time = None;
 		}
+	}
+
+	/// The amount of times this specific handler has been ran.
+	pub fn run_index(&self) -> usize {
+		self.run_index
 	}
 }
 impl Default for Event {
