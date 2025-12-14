@@ -1,5 +1,5 @@
 use crate::{ DEFAULT_DUPLICATE_HANDLER, DuplicateHandler, TaskLike, TaskScheduler, TaskType };
-use std::{ error::Error, sync::Arc, time::{ Duration, Instant } };
+use std::{ error::Error, time::{ Duration, Instant } };
 
 
 
@@ -15,7 +15,6 @@ pub struct Task {
 
 	event:Event,
 	expired:bool,
-	time_threshold:Option<(Duration, Arc<dyn Fn(&Task, Duration) + Send + Sync>)>,
 
 	handler_index:usize,
 	handlers:Vec<Handler>,
@@ -34,7 +33,6 @@ impl Task {
 
 			event: Event::new(),
 			expired: false,
-			time_threshold: None,
 
 			handler_index: 0,
 			handlers: vec![Box::new(handler)],
@@ -46,12 +44,6 @@ impl Task {
 	/// Return self with a duplicate handler.
 	pub fn with_duplicate_handler(mut self, duplicate_handler:DuplicateHandler) -> Self {
 		self.duplicate_handler = duplicate_handler;
-		self
-	}
-
-	/// Add a maximum allowed duration for the task. Executes the given handler if the task duration exceeds the max duration.
-	pub fn with_execution_threshold<T:Fn(&Task, Duration) + Send + Sync + 'static>(mut self, max_duration:Duration, on_exceed:T) -> Self {
-		self.time_threshold = Some((max_duration, Arc::new(on_exceed)));
 		self
 	}
 
@@ -121,20 +113,7 @@ impl TaskLike for Task {
 
 		// Run handlers.
 		self.event.repeat = false;
-		let result:HandlerResult = {
-			match &self.time_threshold {
-				Some((duration_threshold, duration_exceeded_handler)) => {
-					let handler_start:Instant = Instant::now();
-					let result:HandlerResult = (self.handlers[self.handler_index])(task_scheduler, &mut self.event);
-					let elapsed:Duration = handler_start.elapsed();
-					if &elapsed > duration_threshold {
-						duration_exceeded_handler(self, elapsed);
-					}
-					result
-				}
-				None => (self.handlers[self.handler_index])(task_scheduler, &mut self.event)
-			}
-		};
+		let result:HandlerResult = (self.handlers[self.handler_index])(task_scheduler, &mut self.event);
 		self.event.run_index += 1;
 
 		// Run error handler on error.
