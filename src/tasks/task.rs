@@ -142,6 +142,14 @@ impl TaskLike for Task {
 			self.expired = true;
 		}
 
+		// If event set a target handler index, go to that one.
+		if let Some(target_handler_index) = self.event.target_handler_index.take() {
+			if target_handler_index < self.handlers.len() {
+				self.handler_index = target_handler_index;
+				self.event.repeat = true;
+			}
+		}
+
 		// If task should not repeat, switch to next handler or set as expired.
 		if !self.event.repeat {
 			self.event = Event::new();
@@ -178,7 +186,8 @@ impl TaskLike for Task {
 pub struct Event {
 	pub(crate) target_instant:Instant,
 	pub(crate) repeat:bool,
-	pub(crate) pause_time:Option<Instant>
+	pub(crate) pause_time:Option<Instant>,
+	pub(crate) target_handler_index:Option<usize>
 }
 impl Event {
 
@@ -189,7 +198,8 @@ impl Event {
 		Event {
 			target_instant: Instant::now(),
 			repeat: true,
-			pause_time: None
+			pause_time: None,
+			target_handler_index: None
 		}
 	}
 
@@ -217,6 +227,11 @@ impl Event {
 		self.delay(delay);
 		self.repeat();
 		Ok(())
+	}
+
+	/// Move to a specific handler by index.
+	pub fn move_to_handler(&mut self, handler_index:usize) {
+		self.target_handler_index = Some(handler_index);
 	}
 
 	/// Pause the event. Stores the current time and adds the paused time to the trigger timer upon resume.

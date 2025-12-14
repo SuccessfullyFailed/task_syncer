@@ -77,6 +77,33 @@ mod test {
 	}
 
 	#[test]
+	fn test_task_handler_index_navigation() {
+		static mut MODIFICATION_CHECK:u8 = 0;
+		let mut task:Task = Task::new("test", |_, _| unsafe {
+						MODIFICATION_CHECK += 1;
+						Ok(())
+					})
+					.then(|_, _| unsafe {
+						MODIFICATION_CHECK += 2;
+						Ok(())
+					})
+					.then(|_, _| unsafe {
+						MODIFICATION_CHECK += 3;
+						Ok(())
+					})
+					.then(|_, event| unsafe {
+						if MODIFICATION_CHECK < 8 {
+							event.move_to_handler(1);
+						}
+						Ok(())
+					});
+		for _ in 0..7 {
+			task.run(&TaskScheduler::new());
+		}
+		assert_eq!(unsafe { MODIFICATION_CHECK }, 11);
+	}
+
+	#[test]
 	fn test_task_pausing() {
 		let now:Instant = Instant::now();
 		
