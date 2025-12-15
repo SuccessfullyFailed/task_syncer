@@ -50,6 +50,11 @@ impl TaskScheduler {
 		self.add_modification(TaskSystemModification::TriggerEvent(event_name.to_string()));
 	}
 
+	/// Get a list of all pending event names.
+	pub fn pending_event_names(&self) -> Vec<String> {
+		self.0.lock().unwrap().iter().map(|modification| match modification { TaskSystemModification::TriggerEvent(event_name) => Some(event_name.to_string()), _ => None }).flatten().collect()
+	}
+
 	/// Extract all requested modifications.
 	pub(crate) fn drain(&self) -> Vec<TaskSystemModification> {
 		self.0.lock().unwrap().drain(..).collect()
