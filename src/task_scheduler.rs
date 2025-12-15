@@ -1,5 +1,5 @@
+use std::sync::{ Mutex, MutexGuard };
 use crate::{ TaskLike, TaskType };
-use std::sync::Mutex;
 
 
 
@@ -50,14 +50,26 @@ impl TaskScheduler {
 		self.add_modification(TaskSystemModification::TriggerEvent(event_name.to_string()));
 	}
 
-	/// Get a list of all pending event names.
-	pub fn pending_event_names(&self) -> Vec<String> {
-		self.0.lock().unwrap().iter().map(|modification| match modification { TaskSystemModification::TriggerEvent(event_name) => Some(event_name.to_string()), _ => None }).flatten().collect()
-	}
-
 	/// Extract all requested modifications.
 	pub(crate) fn drain(&self) -> Vec<TaskSystemModification> {
 		self.0.lock().unwrap().drain(..).collect()
+	}
+
+	/// Drain specifically the named events.
+	pub fn drain_named_events(&self) -> Vec<String> {
+		let mut events_handle:MutexGuard<'_, Vec<TaskSystemModification>> = self.0.lock().unwrap();
+		let mut named_events:Vec<String> = Vec::new();
+		let mut index:usize = 0;
+		while index < events_handle.len() {
+			match &events_handle[index] {
+				TaskSystemModification::TriggerEvent(event_name) => {
+					named_events.push(event_name.to_string());
+					events_handle.remove(index);
+				},
+				_ => index += 1
+			}
+		}
+		named_events
 	}
 }
 impl Default for TaskScheduler {
