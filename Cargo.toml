@@ -2,3 +2,7 @@
 name = "task_syncer"
 version = "0.1.5"
 edition = "2021"
+
+
+[build-dependencies]
+file_ref={ git="https://github.com/SuccessfullyFailed/file_ref" }

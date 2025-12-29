@@ -1,0 +1,374 @@
+use crate::{ Event, TaskHandler as TH, TaskHandlerSource as THC };
+use std::{ error::Error, sync::Arc };
+
+fn ih<T:THC>(t:T) -> TH { t.into_handler() }
+
+
+
+impl THC for Box<dyn FnMut()  + Send + Sync + 'static> {
+	fn into_handler(mut self) -> TH {
+		TH::FnMut(Box::new(move |_event| { self(); Ok(()) }))
+	}
+}
+impl THC for Box<dyn FnMut() -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
+	fn into_handler(mut self) -> TH {
+		TH::FnMut(Box::new(move |_event| { self() }))
+	}
+}
+impl THC for Box<dyn FnMut(&mut Event)  + Send + Sync + 'static> {
+	fn into_handler(mut self) -> TH {
+		TH::FnMut(Box::new(move |event| { self(event); Ok(()) }))
+	}
+}
+impl THC for Box<dyn FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
+	fn into_handler(mut self) -> TH {
+		TH::FnMut(Box::new(move |event| { self(event) }))
+	}
+}
+impl THC for Arc<dyn Fn()  + Send + Sync + 'static> {
+	fn into_handler(self) -> TH {
+		TH::Fn(Box::new(move |_event| { self(); Ok(()) }))
+	}
+}
+impl THC for Arc<dyn Fn() -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
+	fn into_handler(self) -> TH {
+		TH::Fn(Box::new(move |_event| { self() }))
+	}
+}
+impl THC for Arc<dyn Fn(&mut Event)  + Send + Sync + 'static> {
+	fn into_handler(self) -> TH {
+		TH::Fn(Box::new(move |event| { self(event); Ok(()) }))
+	}
+}
+impl THC for Arc<dyn Fn(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
+	fn into_handler(self) -> TH {
+		TH::Fn(Box::new(move |event| { self(event) }))
+	}
+}
+
+
+
+
+impl<T:THC + Clone + 'static, const SIZE:usize> THC for [T; SIZE] {
+	fn into_handler(self) -> TH {
+		self.to_vec().into_handler()
+	}
+}
+impl<T:THC + 'static> THC for Vec<T> {
+	fn into_handler(self) -> TH {
+		TH::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
+	}
+}
+
+
+
+impl<A:THC + 'static, B:THC + 'static> THC for (A, B) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static> THC for (A, B, C) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static> THC for (A, B, C, D) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static> THC for (A, B, C, D, E) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static> THC for (A, B, C, D, E, F) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static> THC for (A, B, C, D, E, F, G) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static> THC for (A, B, C, D, E, F, G, H) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static> THC for (A, B, C, D, E, F, G, H, I) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static, BG:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF, BG) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57), ih(self.58)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static, BG:THC + 'static, BH:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF, BG, BH) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57), ih(self.58), ih(self.59)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static, BG:THC + 'static, BH:THC + 'static, BI:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF, BG, BH, BI) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57), ih(self.58), ih(self.59), ih(self.60)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static, BG:THC + 'static, BH:THC + 'static, BI:THC + 'static, BJ:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF, BG, BH, BI, BJ) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57), ih(self.58), ih(self.59), ih(self.60), ih(self.61)], 0))
+	}
+}
+impl<A:THC + 'static, B:THC + 'static, C:THC + 'static, D:THC + 'static, E:THC + 'static, F:THC + 'static, G:THC + 'static, H:THC + 'static, I:THC + 'static, J:THC + 'static, K:THC + 'static, L:THC + 'static, M:THC + 'static, N:THC + 'static, O:THC + 'static, P:THC + 'static, Q:THC + 'static, R:THC + 'static, S:THC + 'static, T:THC + 'static, U:THC + 'static, V:THC + 'static, W:THC + 'static, X:THC + 'static, Y:THC + 'static, Z:THC + 'static, AA:THC + 'static, AB:THC + 'static, AC:THC + 'static, AD:THC + 'static, AE:THC + 'static, AF:THC + 'static, AG:THC + 'static, AH:THC + 'static, AI:THC + 'static, AJ:THC + 'static, AK:THC + 'static, AL:THC + 'static, AM:THC + 'static, AN:THC + 'static, AO:THC + 'static, AP:THC + 'static, AQ:THC + 'static, AR:THC + 'static, AS:THC + 'static, AT:THC + 'static, AU:THC + 'static, AV:THC + 'static, AW:THC + 'static, AX:THC + 'static, AY:THC + 'static, AZ:THC + 'static, BA:THC + 'static, BB:THC + 'static, BC:THC + 'static, BD:THC + 'static, BE:THC + 'static, BF:THC + 'static, BG:THC + 'static, BH:THC + 'static, BI:THC + 'static, BJ:THC + 'static, BK:THC + 'static> THC for (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG, AH, AI, AJ, AK, AL, AM, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA, BB, BC, BD, BE, BF, BG, BH, BI, BJ, BK) {
+	fn into_handler(self) -> TH {
+		TH::List((vec![ih(self.0), ih(self.1), ih(self.2), ih(self.3), ih(self.4), ih(self.5), ih(self.6), ih(self.7), ih(self.8), ih(self.9), ih(self.10), ih(self.11), ih(self.12), ih(self.13), ih(self.14), ih(self.15), ih(self.16), ih(self.17), ih(self.18), ih(self.19), ih(self.20), ih(self.21), ih(self.22), ih(self.23), ih(self.24), ih(self.25), ih(self.26), ih(self.27), ih(self.28), ih(self.29), ih(self.30), ih(self.31), ih(self.32), ih(self.33), ih(self.34), ih(self.35), ih(self.36), ih(self.37), ih(self.38), ih(self.39), ih(self.40), ih(self.41), ih(self.42), ih(self.43), ih(self.44), ih(self.45), ih(self.46), ih(self.47), ih(self.48), ih(self.49), ih(self.50), ih(self.51), ih(self.52), ih(self.53), ih(self.54), ih(self.55), ih(self.56), ih(self.57), ih(self.58), ih(self.59), ih(self.60), ih(self.61), ih(self.62)], 0))
+	}
+}

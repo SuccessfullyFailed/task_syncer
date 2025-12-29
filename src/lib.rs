@@ -1,9 +1,6 @@
-mod task_system;
-mod task_system_u;
-mod task_scheduler;
-mod task_scheduler_u;
-mod tasks;
+mod task;
+mod task_handler;
+mod task_handler_generated_implementations;
 
-pub use task_system::*;
-pub use task_scheduler::*;
-pub use tasks::*;
+pub use task::*;
+pub use task_handler::*;
