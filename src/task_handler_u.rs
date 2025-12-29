@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-	use crate::{ Event, TaskHandler };
-	use std::sync::Mutex;
+	use std::{ sync::Mutex, time::Instant };
+	use crate::{ TaskEvent, TaskHandler };
 
 
 
@@ -10,10 +10,11 @@ mod tests {
 		static RUN_PROOF:Mutex<u8> = Mutex::new(0);
 
 		let mut handler:TaskHandler = TaskHandler::None;
-		let mut event:Event = Event::default();
+		let mut event:TaskEvent = TaskEvent::default();
 		
+		let now:Instant = Instant::now();
 		for _ in 0..64 {
-			handler.run(&mut event).unwrap();
+			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), 0);
 			assert_eq!(event.expired, true);
 		}
@@ -30,10 +31,11 @@ mod tests {
 			}
 			Ok(())
 		}));
-		let mut event:Event = Event::default();
+		let mut event:TaskEvent = TaskEvent::default();
 		
+		let now:Instant = Instant::now();
 		for index in 1..=64 {
-			handler.run(&mut event).unwrap();
+			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), index);
 			assert_eq!(event.expired, index >= 50);
 		}
@@ -52,10 +54,11 @@ mod tests {
 			}
 			Ok(())
 		}));
-		let mut event:Event = Event::default();
+		let mut event:TaskEvent = TaskEvent::default();
 		
+		let now:Instant = Instant::now();
 		for index in 1..=64 {
-			handler.run(&mut event).unwrap();
+			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), index);
 			assert_eq!(event.expired, index >= 50);
 		}
@@ -72,10 +75,11 @@ mod tests {
 			}))),
 			0..10
 		));
-		let mut event:Event = Event::default();
+		let mut event:TaskEvent = TaskEvent::default();
 		
+		let now:Instant = Instant::now();
 		for index in 1..=64 {
-			handler.run(&mut event).unwrap();
+			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), index.min(10));
 			assert_eq!(event.expired, index >= 10);
 		}
@@ -111,10 +115,11 @@ mod tests {
 			],
 			0
 		));
-		let mut event:Event = Event::default();
+		let mut event:TaskEvent = TaskEvent::default();
 		
+		let now:Instant = Instant::now();
 		for index in 1..=64 {
-			handler.run(&mut event).unwrap();
+			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), if index < 10 { index } else if index < 20 { 10 + (index - 10) * 2 } else if index < 30 { 30 + (index - 20) * 3 } else { 60 });
 			assert_eq!(event.expired, index >= 30);
 		}
