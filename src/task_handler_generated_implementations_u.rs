@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-	use crate::{ BoxedTaskHandlerSource, Event, TaskHandler };
+	use crate::{ TaskHandlerSource, Event, TaskHandler };
 	use std::{ error::Error, sync::{ Arc, Mutex } };
 
 

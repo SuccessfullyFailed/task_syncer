@@ -81,35 +81,22 @@ impl TaskHandler {
 
 
 pub trait TaskHandlerSource:Sized + Send + Sync + 'static {
-	fn into_handler(self) -> TaskHandler {
-		TaskHandler::None
-	}
-}
-impl<T:Send + Sync + 'static> TaskHandlerSource for T where Box<T>:BoxedTaskHandlerSource {
-	fn into_handler(self) -> TaskHandler {
-		Box::new(self).into_handler()
-	}
-}
-
-
-
-pub trait BoxedTaskHandlerSource:Sized + Send + Sync + 'static {
 	#[allow(unused_mut)]
 	fn into_handler(mut self) -> TaskHandler {
 		TaskHandler::None
 	}
 }
-impl<T:BoxedTaskHandlerSource + Clone + 'static, const SIZE:usize> BoxedTaskHandlerSource for [T; SIZE] {
+impl<T:TaskHandlerSource + Clone + 'static, const SIZE:usize> TaskHandlerSource for [T; SIZE] {
 	fn into_handler(self) -> TaskHandler {
 		self.to_vec().into_handler()
 	}
 }
-impl<T:BoxedTaskHandlerSource + 'static> BoxedTaskHandlerSource for Vec<T> {
+impl<T:TaskHandlerSource + 'static> TaskHandlerSource for Vec<T> {
 	fn into_handler(self) -> TaskHandler {
 		TaskHandler::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
 	}
 }
-impl<T> BoxedTaskHandlerSource for Box<T> where T:FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static {
+impl<T:FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> TaskHandlerSource for T {
 	fn into_handler(self) -> TaskHandler {
 		TaskHandler::FnMut(Box::new(self))
 	}

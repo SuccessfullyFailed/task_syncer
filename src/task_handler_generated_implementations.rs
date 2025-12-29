@@ -1,4 +1,4 @@
-use crate::{ Event, TaskHandler as TH, BoxedTaskHandlerSource as THC };
+use crate::{ Event, TaskHandler as TH, TaskHandlerSource as THC };
 use std::{ error::Error, sync::Arc };
 
 fn bih<T:THC>(t:T) -> TH { t.into_handler() }
@@ -22,11 +22,6 @@ impl THC for Box<dyn FnMut(&mut Event)  + Send + Sync + 'static> {
 		TH::FnMut(Box::new(move |event| { self(event); Ok(()) }))
 	}
 }
-impl THC for Box<dyn FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
-	fn into_handler(mut self) -> TH {
-		TH::FnMut(Box::new(move |event| { self(event) }))
-	}
-}
 impl THC for Box<dyn Fn()  + Send + Sync + 'static> {
 	fn into_handler(self) -> TH {
 		TH::Fn(Box::new(move |_event| { self(); Ok(()) }))
@@ -40,11 +35,6 @@ impl THC for Box<dyn Fn() -> Result<(), Box<dyn Error>> + Send + Sync + 'static>
 impl THC for Box<dyn Fn(&mut Event)  + Send + Sync + 'static> {
 	fn into_handler(self) -> TH {
 		TH::Fn(Box::new(move |event| { self(event); Ok(()) }))
-	}
-}
-impl THC for Box<dyn Fn(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> {
-	fn into_handler(self) -> TH {
-		TH::Fn(Box::new(move |event| { self(event) }))
 	}
 }
 impl THC for Arc<dyn Fn()  + Send + Sync + 'static> {

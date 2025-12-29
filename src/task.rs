@@ -1,4 +1,4 @@
-use crate::{ BoxedTaskHandlerSource, task_handler::TaskHandler };
+use crate::{ TaskHandlerSource, task_handler::TaskHandler };
 use std::error::Error;
 
 
@@ -15,7 +15,7 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<T:'static>(name:&str, handler:T) -> Task where Box<T>:BoxedTaskHandlerSource {
+	pub fn new<T:'static>(name:&str, handler:T) -> Task where Box<T>:TaskHandlerSource {
 		Task {
 			name: name.to_string(),
 			event: Event::default(),

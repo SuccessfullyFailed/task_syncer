@@ -22,7 +22,7 @@ fn update_task_handler_implementations() {
 
 fn generate_task_handler_implementations() {
 	const IMPLEMENTATION_PREFIX:&str = r#"
-		use crate::{ Event, TaskHandler as TH, BoxedTaskHandlerSource as THC };
+		use crate::{ Event, TaskHandler as TH, TaskHandlerSource as THC };
 		use std::{ error::Error, sync::Arc };
 		
 		fn bih<T:THC>(t:T) -> TH { t.into_handler() }
@@ -30,7 +30,7 @@ fn generate_task_handler_implementations() {
 	const TESTS_PREFIX:&str = r#"
 		#[cfg(test)]
 		mod tests {
-			use crate::{ BoxedTaskHandlerSource, Event, TaskHandler };
+			use crate::{ TaskHandlerSource, Event, TaskHandler };
 			use std::{ error::Error, sync::{ Arc, Mutex } };
 
 	"#;
@@ -95,31 +95,33 @@ fn handler_implementation_for_singular_type(implementation_content:&mut String, 
 	"#;
 	const EXPIRE_AT:&str = "50";
 
-	let input_args:String = input_args.iter().map(|input_arg| if fn_arg_set.contains(input_arg) { input_arg[0].to_string() } else { "_".to_string() + input_arg[0] }).collect::<Vec<String>>().join(", ");
+	let input_args_str:String = input_args.iter().map(|input_arg| if fn_arg_set.contains(input_arg) { input_arg[0].to_string() } else { "_".to_string() + input_arg[0] }).collect::<Vec<String>>().join(", ");
 	let fn_arg_names:String = fn_arg_set.iter().map(|[arg_name, _]| *arg_name).collect::<Vec<&str>>().join(", ");
 	let fn_arg_types:String = fn_arg_set.iter().map(|[_, arg_type]| *arg_type).collect::<Vec<&str>>().join(", ");
 	let is_mut:bool = fn_type.contains("Mut");
 	let has_return_type:bool = return_type != "";
 	let has_event:bool = fn_arg_names.contains("event");
 
-	*implementation_content += &apply_template(IMPLEMENTATION_TEMPLATE, &[
-		("wrapper", wrapper),
-		("fn_type", fn_type),
-		("input_args", &input_args),
-		("fn_arg_types", &fn_arg_types),
-		("fn_arg_names", &fn_arg_names),
-		("return_type", return_type),
-		("self", if is_mut { "mut self" } else { "self" }),
-		("task_handler_type", fn_type),
-		("return_value", if has_return_type { "" } else { "; Ok(())" })
-	]);
+	if !(wrapper == "Box" && fn_arg_set.len() == input_args.len() && has_return_type) {
+		*implementation_content += &apply_template(IMPLEMENTATION_TEMPLATE, &[
+			("wrapper", wrapper),
+			("fn_type", fn_type),
+			("input_args", &input_args_str),
+			("fn_arg_types", &fn_arg_types),
+			("fn_arg_names", &fn_arg_names),
+			("return_type", return_type),
+			("self", if is_mut { "mut self" } else { "self" }),
+			("task_handler_type", fn_type),
+			("return_value", if has_return_type { "" } else { "; Ok(())" })
+		]);
+	}
 
 	*test_content += &(tab_str(&apply_template(TEST_TEMPLATE, &[
 		("test_name_suffix", &format!("{}_{}_{}args_{}_result", wrapper.to_lowercase(), fn_type.to_lowercase(), fn_arg_set.len(), if return_type == "" { "no" } else { "has" })),
 		("owned_var_definition", if is_mut { "\n\tlet mut owned_index:u8 = 0;" } else { "" }),
 		("wrapper", wrapper),
 		("fn_type", fn_type),
-		("input_args", &input_args),
+		("input_args", &input_args_str),
 		("fn_arg_types", &fn_arg_types),
 		("fn_arg_names", &fn_arg_names),
 		("return_type", return_type),
@@ -183,9 +185,9 @@ fn handler_implementation_for_set(implementation_content:&mut String, test_conte
 		("list_contents", &(0..set_length).map(|index| format!("bih(self.{index})")).collect::<Vec<String>>().join(", "))
 	]);
 
-	*test_content += &apply_template(TEST_TEMPLATE, &[
-		("set_{}len", &set_length.to_string())
-	]);
+	//*test_content += &apply_template(TEST_TEMPLATE, &[
+	//	("set_{}len", &set_length.to_string())
+	//]);
 }
 
 
