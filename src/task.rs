@@ -1,4 +1,4 @@
-use crate::task_handler::TaskHandler;
+use crate::{ BoxedTaskHandlerSource, task_handler::TaskHandler };
 use std::error::Error;
 
 
@@ -6,38 +6,51 @@ use std::error::Error;
 pub struct Task {
 	pub(crate) name:String,
 	pub(crate) event:Event,
-	handler_index:usize,
-	handlers:Vec<TaskHandler>,
+	handler:Box<TaskHandler>,
 	catch_handler:Option<Box<dyn Fn(&Box<dyn Error>) + Send + Sync + 'static>>,
 	finally_handler:Option<Box<dyn Fn(&Result<(), Box<dyn Error>>) + Send + Sync + 'static>>
 }
 impl Task {
 
+	/* CONSTRUCTOR METHODS */
+
+	/// Create a new task.
+	pub fn new<T:'static>(name:&str, handler:T) -> Task where Box<T>:BoxedTaskHandlerSource {
+		Task {
+			name: name.to_string(),
+			event: Event::default(),
+			handler: Box::new(vec![Box::new(handler)].into_handler()),
+			catch_handler: None,
+			finally_handler: None
+		}
+	}
+
+
+
+	/* USAGE METHODS */
+
 	/// Run the task.
 	pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
-		match self.handlers.get_mut(self.handler_index) {
-			Some(handler) => {
-				let result:Result<(), Box<dyn Error>> = handler.run(&mut self.event);
-				if let Err(error) = &result {
-					if let Some(catch_handler) = &self.catch_handler {
-						catch_handler(error);
-					}
-				}
-				if self.event.expired {
-					self.handler_index += 1;
-					if self.handler_index < self.handlers.len() {
-						self.event = Event::default();
-					} else if let Some(finally_handler) = &self.finally_handler {
-						finally_handler(&result);
-					}
-				}
-				result
-			},
-			None => {
-				self.event.expired = true;
-				Ok(())
+
+		// Run handler.
+		let result:Result<(), Box<dyn Error>> = self.handler.run(&mut self.event);
+
+		// Custom error handler.
+		if let Err(error) = &result {
+			if let Some(catch_handler) = &self.catch_handler {
+				catch_handler(error);
 			}
 		}
+
+		// Expiration handler.
+		if self.event.expired {
+			if let Some(finally_handler) = &self.finally_handler {
+				finally_handler(&result);
+			}
+		}
+
+		// Return result.
+		result
 	}
 }
 

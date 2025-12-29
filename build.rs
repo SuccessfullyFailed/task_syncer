@@ -21,15 +21,17 @@ fn update_task_handler_implementations() {
 
 fn generate_task_handler_implementations() {
 	const PREFIX:&str = r#"
-		use crate::{ Event, TaskHandler as TH, TaskHandlerSource as THC };
+		use crate::{ Event, TaskHandler as TH, BoxedTaskHandlerSource as THC };
 		use std::{ error::Error, sync::Arc };
 		
 		fn ih<T:THC>(t:T) -> TH { t.into_handler() }
 	"#;
 	
-	let output_content:String = format!("{}\n\n\n\n{}\n\n\n\n{}\n\n\n\n{}", untab_str(PREFIX), handler_implementations_for_all_singular_types(), handler_implementations_for_all_lists(), handler_implementations_for_all_sets());
+	let output_content:String = format!("{}\n\n\n\n{}\n\n\n\n{}", untab_str(PREFIX), handler_implementations_for_all_singular_types(), handler_implementations_for_all_sets());
 	GENERATED_HANDLER_IMPLEMENTATIONS_FILE.write(output_content).expect("Could not write generated implementations to file.");
 }
+
+
 
 fn handler_implementations_for_all_singular_types() -> String {
 	const WRAPPERS:&[[&str; 2]] = &[["Box", "FnMut"], ["Arc", "Fn"]];
@@ -75,27 +77,10 @@ fn handler_implementation_for_singular_type(input_args:&[[&str; 2]], wrapper:&st
 		))
 }
 
-fn handler_implementations_for_all_lists() -> String {
-	untab_str(
-		r#"
-			impl<T:THC + Clone + 'static, const SIZE:usize> THC for [T; SIZE] {
-				fn into_handler(self) -> TH {
-					self.to_vec().into_handler()
-				}
-			}
-			impl<T:THC + 'static> THC for Vec<T> {
-				fn into_handler(self) -> TH {
-					TH::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
-				}
-			}
-		"#
-	)
-}
-
-
 fn handler_implementations_for_all_sets() -> String {
 	(2..64).map(|length| handler_implementation_for_set(length)).collect::<Vec<String>>().join("\n")
 }
+
 fn handler_implementation_for_set(set_length:usize) -> String {
 	const TEMPLATE:&str = r#"
 		impl<$generic_definition> THC for ($set_identification) {

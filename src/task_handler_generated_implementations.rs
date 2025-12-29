@@ -1,4 +1,4 @@
-use crate::{ Event, TaskHandler as TH, TaskHandlerSource as THC };
+use crate::{ Event, TaskHandler as TH, BoxedTaskHandlerSource as THC };
 use std::{ error::Error, sync::Arc };
 
 fn ih<T:THC>(t:T) -> TH { t.into_handler() }
@@ -46,19 +46,6 @@ impl THC for Arc<dyn Fn(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync 
 	}
 }
 
-
-
-
-impl<T:THC + Clone + 'static, const SIZE:usize> THC for [T; SIZE] {
-	fn into_handler(self) -> TH {
-		self.to_vec().into_handler()
-	}
-}
-impl<T:THC + 'static> THC for Vec<T> {
-	fn into_handler(self) -> TH {
-		TH::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
-	}
-}
 
 
 
