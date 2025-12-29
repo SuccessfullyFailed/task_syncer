@@ -5,8 +5,7 @@ use crate::{ Event, Task };
 
 pub enum TaskHandler {
 	None,
-	Fn(Box<dyn Fn(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
-	FnMut(Box<dyn FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
+	Fn(Box<dyn FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
 	Task(Task), // TODO: NEEDS TEST!
 	Repeat((Box<TaskHandler>, Range<usize>)),
 	List((Vec<TaskHandler>, usize))
@@ -34,9 +33,8 @@ impl TaskHandler {
 				Ok(())
 			},
 
-			// Function handlers, return function result.
+			// Function handler, return function result.
 			TaskHandler::Fn(handler) => handler(event),
-			TaskHandler::FnMut(handler_mut) => handler_mut(event),
 
 			// task handler, run task until task event expires.
 			TaskHandler::Task(task) => {
@@ -98,6 +96,6 @@ impl<T:TaskHandlerSource + 'static> TaskHandlerSource for Vec<T> {
 }
 impl<T:FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> TaskHandlerSource for T {
 	fn into_handler(self) -> TaskHandler {
-		TaskHandler::FnMut(Box::new(self))
+		TaskHandler::Fn(Box::new(self))
 	}
 }

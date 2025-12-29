@@ -44,7 +44,7 @@ mod tests {
 		static RUN_PROOF:Mutex<u8> = Mutex::new(0);
 
 		let mut owned_index:u8 = 0;
-		let mut handler:TaskHandler = TaskHandler::FnMut(Box::new(move |event| {
+		let mut handler:TaskHandler = TaskHandler::Fn(Box::new(move |event| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			owned_index += 1;
 			if owned_index == 50 {
