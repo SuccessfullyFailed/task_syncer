@@ -6,7 +6,7 @@ use crate::{ TaskEvent, Task };
 pub enum TaskHandler {
 	None,
 	Fn(Box<dyn FnMut(&mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
-	Task(Task), // TODO: NEEDS TEST!
+	Task(Task),
 	Repeat((Box<TaskHandler>, Range<usize>)),
 	List((Vec<TaskHandler>, usize))
 }

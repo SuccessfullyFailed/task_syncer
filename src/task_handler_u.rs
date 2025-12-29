@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 	use std::{ sync::Mutex, time::Instant };
-	use crate::{ TaskEvent, TaskHandler };
+	use crate::{ Task, TaskEvent, TaskHandler };
 
 
 
@@ -61,6 +61,30 @@ mod tests {
 			handler.run(&now, &mut event).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), index);
 			assert_eq!(event.expired, index >= 50);
+		}
+	}
+
+	#[test]
+	fn handler_task() {
+		static RUN_PROOF:Mutex<u8> = Mutex::new(0);
+
+		let mut handler:TaskHandler = TaskHandler::Task(
+			Task::new("test_task", |event:&mut TaskEvent| {
+				if *RUN_PROOF.lock().unwrap() < 50 {
+					*RUN_PROOF.lock().unwrap() += 1;
+					event.repeated()
+				} else {
+					Ok(())
+				}
+			})
+		);
+		let mut event:TaskEvent = TaskEvent::default();
+		
+		let now:Instant = Instant::now();
+		for index in 1..=64 {
+			handler.run(&now, &mut event).unwrap();
+			assert_eq!(*RUN_PROOF.lock().unwrap(), index.min(50));
+			assert_eq!(event.expired, index > 50);
 		}
 	}
 
