@@ -59,6 +59,15 @@ impl Task {
 pub struct Event {
 	pub(crate) expired:bool
 }
+impl Event {
+
+	/* SETTER METHODS */
+
+	/// Set the event as expired.
+	pub fn expire(&mut self) {
+		self.expired = true;
+	}
+}
 impl Default for Event {
 	fn default() -> Self {
 		Event {

@@ -1,5 +1,5 @@
+use std::{ error::Error, ops::Range };
 use crate::{ Event, Task };
-use std::error::Error;
 
 
 
@@ -7,8 +7,8 @@ pub enum TaskHandler {
 	None,
 	Fn(Box<dyn Fn(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
 	FnMut(Box<dyn FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>),
-	Task(Task),
-	Repeat((Box<TaskHandler>, usize, usize)),
+	Task(Task), // TODO: NEEDS TEST!
+	Repeat((Box<TaskHandler>, Range<usize>)),
 	List((Vec<TaskHandler>, usize))
 }
 impl TaskHandler {
@@ -16,7 +16,7 @@ impl TaskHandler {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task-handler.
-	pub fn new<Source:BoxedTaskHandlerSource>(source:Source) -> TaskHandler {
+	pub fn new<Source:TaskHandlerSource>(source:Source) -> TaskHandler {
 		source.into_handler()
 	}
 
@@ -29,7 +29,10 @@ impl TaskHandler {
 		match self {
 
 			// No handler, return success.
-			TaskHandler::None => Ok(()),
+			TaskHandler::None => {
+				event.expired = true;
+				Ok(())
+			},
 
 			// Function handlers, return function result.
 			TaskHandler::Fn(handler) => handler(event),
@@ -45,11 +48,11 @@ impl TaskHandler {
 			},
 
 			// Repeat handler the given amount.
-			TaskHandler::Repeat((handler, index, repeat_count)) => {
-				if *index < *repeat_count {
+			TaskHandler::Repeat((handler, range)) => {
+				if range.start < range.end {
 					let result:Result<(), Box<dyn Error>> = handler.run(event);
-					*index += 1;
-					if *index >= *repeat_count {
+					range.start += 1;
+					if range.start >= range.end {
 						event.expired = true;
 					}
 					result
@@ -79,7 +82,7 @@ impl TaskHandler {
 
 pub trait TaskHandlerSource:Sized + Send + Sync + 'static {
 	fn into_handler(self) -> TaskHandler {
-		TaskHandler::None	
+		TaskHandler::None
 	}
 }
 impl<T:Send + Sync + 'static> TaskHandlerSource for T where Box<T>:BoxedTaskHandlerSource {
@@ -104,5 +107,10 @@ impl<T:BoxedTaskHandlerSource + Clone + 'static, const SIZE:usize> BoxedTaskHand
 impl<T:BoxedTaskHandlerSource + 'static> BoxedTaskHandlerSource for Vec<T> {
 	fn into_handler(self) -> TaskHandler {
 		TaskHandler::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
+	}
+}
+impl<T> BoxedTaskHandlerSource for Box<T> where T:FnMut(&mut Event) -> Result<(), Box<dyn Error>> + Send + Sync + 'static {
+	fn into_handler(self) -> TaskHandler {
+		TaskHandler::FnMut(Box::new(self))
 	}
 }
