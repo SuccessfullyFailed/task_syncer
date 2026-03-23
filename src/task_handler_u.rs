@@ -72,7 +72,7 @@ mod tests {
 			Task::new("test_task", |event:&mut TaskEvent| {
 				if *RUN_PROOF.lock().unwrap() < 50 {
 					*RUN_PROOF.lock().unwrap() += 1;
-					event.repeated()
+					event.repeate_r()
 				} else {
 					Ok(())
 				}

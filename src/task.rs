@@ -87,20 +87,23 @@ impl TaskEvent {
 		self.repeat = true;
 	}
 
-	/// Set the event to run again. Always returns 'Ok(())' so it can be used at the end of a handler.
-	pub fn repeated(&mut self) -> Result<(), Box<dyn Error>> {
+	/// Set the event to run again.
+	/// Always returns 'Ok(())' so it can be used at the end of a handler.
+	pub fn repeate_r(&mut self) -> Result<(), Box<dyn Error>> {
 		self.repeat = true;
 		Ok(())
 	}
 
-	/// Reschedule the event to run again. Combines the 'delay' and 'run_again' function.
+	/// Reschedule the event to run again.
+	/// Combines the 'delay' and 'run_again' function.
 	pub fn reschedule(&mut self, delay:Duration) {
 		self.delay(delay);
 		self.repeat();
 	}
 
-	/// Reschedule the event to run again. Combines the 'delay' and 'run_again' function. Always returns 'Ok(())' so it can be used at the end of a handler.
-	pub fn rescheduled(&mut self, delay:Duration) -> Result<(), Box<dyn Error>> {
+	/// Reschedule the event to run again.
+	/// Combines the 'delay' and 'run_again' function. Always returns 'Ok(())' so it can be used at the end of a handler.
+	pub fn reschedule_r(&mut self, delay:Duration) -> Result<(), Box<dyn Error>> {
 		self.delay(delay);
 		self.repeat();
 		Ok(())

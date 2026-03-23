@@ -12,7 +12,7 @@ mod tests {
 		let mut task:Task = Task::new("test_task", |event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			if *RUN_PROOF.lock().unwrap() < 50 {
-				event.repeated()
+				event.repeate_r()
 			} else {
 				Ok(())
 			}
@@ -32,7 +32,7 @@ mod tests {
 
 		let mut task:Task = Task::new("test_task", |event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
-			event.rescheduled(Duration::from_millis(100))
+			event.reschedule_r(Duration::from_millis(100))
 		});
 		
 		let mut now:Instant = Instant::now();

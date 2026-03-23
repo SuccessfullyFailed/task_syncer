@@ -1,16 +1,18 @@
-use std::{ error::Error, sync::Mutex, thread::sleep, time::{ Duration, Instant } };
-use crate::Task;
+use std::{ error::Error, sync::{ Arc, Mutex }, thread::{ self, JoinHandle, sleep }, time::{ Duration, Instant } };
+use crate::{ Task, TaskModificationRequest, TaskScheduler };
 
 
 
+#[derive(PartialEq)]
+enum TaskSystemStatus { Running, StopRequested, Stopped }
 const MAX_INTERVAL:Duration = Duration::from_millis(250);
 
 
 
 pub struct TaskSystem {
 	tasks:Vec<Task>, // Tasks are only modified in the running method, so this does not need any synchronization technique.
-	scheduler:TaskScheduler,
-	error_handler:Box<dyn Fn(&str, Box<dyn Error>)>
+	scheduler:Arc<TaskScheduler>,
+	error_handler:Box<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>
 }
 impl TaskSystem {
 
@@ -24,6 +26,11 @@ impl TaskSystem {
 
 
 	/* RUNNING METHODS */
+
+	/// Start the system, runs it in another thread.
+	pub fn start(self) -> TaskSystemRunHandle {
+		TaskSystemRunHandle::new(self)
+	}
 
 	/// Keep running the system indefinitely.
 	pub fn run(&mut self) {
@@ -61,19 +68,48 @@ impl TaskSystem {
 		self.tasks.retain(|task| !task.event.expired);
 
 		// Apply modifications in the scheduler queue.
-		for modification in self.scheduler.0.lock().unwrap().drain(..) {
+		for modification in self.scheduler.drain() {
 			match modification {
 				TaskModificationRequest::AddTask(task) => self.tasks.push(task),
 				TaskModificationRequest::RetainTasks(filter) => self.tasks.retain(filter)
 			}
 		}
 	}
+
+
+
+	/* SCHEDULER METHODS */
+
+	/// Get the scheduler of the system.
+	pub fn scheduler(&self) -> &TaskScheduler {
+		&self.scheduler
+	}
+
+	/// Add a task to the system.
+	pub fn add_task(&self, task:Task) {
+		self.scheduler.add_task(task);
+	}
+
+	/// Request to add a new task to the system, overwriting any existing ones with the same name. Will be applied on the next run of the system.
+	pub fn update_task(&self, task:Task) {
+		self.scheduler.update_task(task);
+	}
+
+	/// Request to remove a task from the system. Will be applied on the next run of the system.
+	pub fn remove_task(&self, task_name:&str) {
+		self.scheduler.remove_task(task_name);
+	}
+
+	/// Retain tasks by a specific filter.
+	pub fn retain_tasks<Filter:FnMut(&Task) -> bool + Send + Sync + 'static>(&self, filter:Filter) {
+		self.scheduler.retain_tasks(filter);
+	}
 }
 impl Default for TaskSystem {
 	fn default() -> Self {
 		TaskSystem {
 			tasks: Vec::new(),
-			scheduler: TaskScheduler::default(),
+			scheduler: Arc::new(TaskScheduler::default()),
 			error_handler: Box::new(|task_name, error| eprintln!("task '{task_name}' returned error: '{error}'"))
 		}
 	}
@@ -81,34 +117,72 @@ impl Default for TaskSystem {
 
 
 
-pub enum TaskModificationRequest { AddTask(Task), RetainTasks(Box<dyn FnMut(&Task) -> bool>) }
-pub struct TaskScheduler(Mutex<Vec<TaskModificationRequest>>);
-impl TaskScheduler {
+pub struct TaskSystemRunHandle {
+	thread:JoinHandle<TaskSystem>,
+	scheduler:Arc<TaskScheduler>,
+	status_handle:Arc<Mutex<TaskSystemStatus>>
+}
+impl TaskSystemRunHandle {
 
-	/// Request to add a new task to the system. Will be applied on the next run of the system.
+	/* CREATE/UPDATE METHODS */
+
+	/// Create a new handle.
+	pub fn new(mut system:TaskSystem) -> TaskSystemRunHandle {
+		let scheduler_clone:Arc<TaskScheduler> = Arc::clone(&system.scheduler);
+		let status_handle:Arc<Mutex<TaskSystemStatus>> = Arc::new(Mutex::new(TaskSystemStatus::Running));
+		let status_handle_clone:Arc<Mutex<TaskSystemStatus>> = Arc::clone(&status_handle);
+		TaskSystemRunHandle {
+			thread: thread::spawn(move || {
+				system.run_while(|_| *status_handle.lock().unwrap() == TaskSystemStatus::Running);
+				*status_handle.lock().unwrap() = TaskSystemStatus::Stopped;
+				system
+			}),
+			scheduler: scheduler_clone,
+			status_handle: status_handle_clone
+		}
+	}
+
+	/// Check if the system is still running.
+	pub fn running(&self) -> bool {
+		*self.status_handle.lock().unwrap() != TaskSystemStatus::Stopped
+	}
+
+	/// Stop the system.
+	/// Waits until the remote thread has confirmed exit.
+	pub fn stop(self) -> Result<TaskSystem, Box<dyn Error>> {
+		*self.status_handle.lock().unwrap() = TaskSystemStatus::StopRequested;
+		match self.thread.join() {
+			Ok(system) => Ok(system),
+			Err(error) => Err(format!("Could not retrieve TaskSystem from run handle: {:?}", error).into())
+		}
+	}
+
+
+
+	/* SCHEDULER METHODS */
+
+	/// Get the scheduler of the system.
+	pub fn scheduler(&self) -> &TaskScheduler {
+		&self.scheduler
+	}
+
+	/// Add a task to the system.
 	pub fn add_task(&self, task:Task) {
-		self.0.lock().unwrap().push(TaskModificationRequest::AddTask(task));
+		self.scheduler.add_task(task);
 	}
 
 	/// Request to add a new task to the system, overwriting any existing ones with the same name. Will be applied on the next run of the system.
 	pub fn update_task(&self, task:Task) {
-		self.remove_task(&task.name);
-		self.add_task(task);
+		self.scheduler.update_task(task);
 	}
 
 	/// Request to remove a task from the system. Will be applied on the next run of the system.
 	pub fn remove_task(&self, task_name:&str) {
-		let task_name:String = task_name.to_string();
-		self.retain_tasks(move |task| task.name != task_name);
+		self.scheduler.remove_task(task_name);
 	}
 
 	/// Retain tasks by a specific filter.
 	pub fn retain_tasks<Filter:FnMut(&Task) -> bool + Send + Sync + 'static>(&self, filter:Filter) {
-		self.0.lock().unwrap().push(TaskModificationRequest::RetainTasks(Box::new(filter)));
-	}
-}
-impl Default for TaskScheduler {
-	fn default() -> Self {
-		TaskScheduler(Mutex::new(Vec::new()))
+		self.scheduler.retain_tasks(filter);
 	}
 }
