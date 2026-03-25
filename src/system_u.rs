@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 	use std::{ sync::Mutex, thread::sleep, time::{ Duration, Instant } };
-	use crate::{ Task, TaskEvent, TaskSystem, TaskSystemRunHandle };
+	use crate::{ Task, TaskEvent, TaskSystem };
 
 
 	#[test]
@@ -40,7 +40,7 @@ mod test {
 
 		// Run for a little over 5 loops of the first tasks.
 		let end_of_run:Instant = Instant::now() + Duration::from_millis(45);
-		system.run_while(move |_| Instant::now() < end_of_run);
+		system.run_while(move || Instant::now() < end_of_run);
 
 		// Assert results.
 		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 5);
@@ -54,7 +54,7 @@ mod test {
 		static RUN_PROOF_C:Mutex<usize> = Mutex::new(0);
 
 		// Create system with two tasks.
-		let system:TaskSystem = TaskSystem::new();
+		let mut system:TaskSystem = TaskSystem::new();
 		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
 			*RUN_PROOF_A.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
@@ -64,21 +64,47 @@ mod test {
 			Ok(())
 		}));
 
-		// Start system and add a third task in the middle of running.
-		let handle:TaskSystemRunHandle = system.start();
+		// Start system and add a third task while still running.
+		system.start();
 		sleep(Duration::from_millis(22));
-		handle.add_task(Task::new("task3", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task3", |event:&mut TaskEvent| {
 			*RUN_PROOF_C.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
 		sleep(Duration::from_millis(22));
 
 		// Stop the system.
-		let _system:TaskSystem = handle.stop().unwrap();
+		system.stop();
 		sleep(Duration::from_millis(20));
 
+		// Assert results.
 		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 5);
 		assert_eq!(*RUN_PROOF_B.lock().unwrap(), 1);
 		assert_eq!(*RUN_PROOF_C.lock().unwrap(), 3);
+	}
+
+	#[test]
+	fn test_system_keeps_tasks_after_stopping() {
+		static RUN_PROOF_A:Mutex<usize> = Mutex::new(0);
+		static RUN_PROOF_B:Mutex<usize> = Mutex::new(0);
+
+		// Create system with two tasks.
+		let mut system:TaskSystem = TaskSystem::new();
+		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
+			*RUN_PROOF_A.lock().unwrap() += 1;
+			event.reschedule_r(Duration::from_millis(10))
+		}));
+		system.add_task(Task::new("task2", |_event:&mut TaskEvent| {
+			*RUN_PROOF_B.lock().unwrap() += 1;
+			Ok(())
+		}));
+
+		// Run the system twice, confirming the system keeps the repeating task.
+		system.run_once();
+		system.run_once();
+
+		// Assert results.
+		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 2);
+		assert_eq!(*RUN_PROOF_B.lock().unwrap(), 1);
 	}
 }
