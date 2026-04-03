@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-	use std::{ sync::Mutex, thread::sleep, time::{ Duration, Instant } };
+	use std::{ sync::Mutex, thread::sleep, time::Duration };
 	use crate::{ Task, TaskEvent, TaskSystem };
 
 
@@ -16,7 +16,9 @@ mod test {
 		}));
 
 		// Run once.
-		system.run_once();
+		system.start();
+		sleep(Duration::from_millis(1));
+		system.stop();
 
 		// Assert results.
 		assert_eq!(*RUN_PROOF.lock().unwrap(), 1);
@@ -39,8 +41,9 @@ mod test {
 		}));
 
 		// Run for a little over 5 loops of the first tasks.
-		let end_of_run:Instant = Instant::now() + Duration::from_millis(45);
-		system.run_while(move || Instant::now() < end_of_run);
+		system.start();
+		sleep(Duration::from_millis(45));
+		system.stop();
 
 		// Assert results.
 		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 5);
@@ -100,8 +103,9 @@ mod test {
 		}));
 
 		// Run the system twice, confirming the system keeps the repeating task.
-		system.run_once();
-		system.run_once();
+		system.start();
+		sleep(Duration::from_millis(15));
+		system.stop();
 
 		// Assert results.
 		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 2);

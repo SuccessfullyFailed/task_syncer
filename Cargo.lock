@@ -3,13 +3,13 @@
 version = 4
 
 [[package]]
-name = "file_ref"
-version = "0.1.2"
-source = "git+https://github.com/SuccessfullyFailed/file_ref#f878a277e98390e0e078c484d70a74b4563178e3"
+name = "modifications_queue"
+version = "0.1.1"
+source = "git+https://github.com/SuccessfullyFailed/modifications_queue#1c64b67d7e1e7cf0a495cb752eb5006c969724ca"
 
 [[package]]
 name = "task_syncer"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
- "file_ref",
+ "modifications_queue",
 ]
