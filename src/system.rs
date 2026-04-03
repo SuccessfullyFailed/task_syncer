@@ -1,4 +1,4 @@
-use std::{ error::Error, time::Instant, sync::{ Arc, Mutex }, thread::{ self, JoinHandle } };
+use std::{ error::Error, sync::Arc, time::Instant, thread::{ self, JoinHandle } };
 use modifications_queue::{ ModificationsQueue, ModificationsQueueRemote };
 use crate::Task;
 
@@ -7,7 +7,6 @@ use crate::Task;
 pub struct TaskSystem {
 	built_in_scheduler:TaskScheduler,
 	error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>,
-	is_running:Arc<Mutex<bool>>,
 	_thread_handle:JoinHandle<()>
 }
 impl TaskSystem {
@@ -40,30 +39,30 @@ impl TaskSystem {
 	/// Signals the linked thread to start running the tasks.
 	/// If the system is already running, this will do nothing.
 	pub fn start(&mut self) {
-		*self.is_running.lock().unwrap() = true;
+		self.built_in_scheduler.0.add(|(_, status)| *status = true);
 	}
 
 	/// Stop the system if it already running.
 	/// Signals the linked thread to stop running tasks.
 	/// If the system is not running, will do nothing.
 	pub fn stop(&mut self) {
-		*self.is_running.lock().unwrap() = false;
+		self.built_in_scheduler.0.add(|(_, status)| *status = false);
 	}
 
 	/// Spawn the thread that handles all modifications and tasks.
-	fn spawn_thread(modifications_queue:ModificationsQueue<(Vec<Task>, Arc<Mutex<bool>>)>, status:Arc<Mutex<bool>>, error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>) -> JoinHandle<()> {
+	fn spawn_thread(modifications_queue:ModificationsQueue<(Vec<Task>, bool)>, error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>) -> JoinHandle<()> {
 		thread::spawn(move || {
-			let mut tasks_and_status:(Vec<Task>, Arc<Mutex<bool>>) = (Vec::new(), status);
+			let mut tasks_and_status:(Vec<Task>, bool) = (Vec::new(), false);
 
 			// Handle modifications until the system should run.
-			while !*tasks_and_status.1.lock().unwrap() {
+			while !tasks_and_status.1 {
 				for modification in modifications_queue.await_change() {
 					modification(&mut tasks_and_status);
 				}
 			}
 
 			// Handle modifications and tasks while the system should run.
-			while *tasks_and_status.1.lock().unwrap() {
+			while tasks_and_status.1 {
 
 				// Run all tasks.
 				let now:Instant =  Instant::now();
@@ -75,7 +74,7 @@ impl TaskSystem {
 
 				// Wait until the next task is scheduled or the next modification.
 				let next_task_target:Option<Instant> = tasks_and_status.0.iter().map(|task| task.event.trigger_target).min();
-				let modifications:Vec<Box<dyn FnOnce(&mut (Vec<Task>, Arc<Mutex<bool>>)) + Send + Sync>> = {
+				let modifications:Vec<Box<dyn FnOnce(&mut (Vec<Task>, bool)) + Send + Sync>> = {
 					match next_task_target {
 						Some(next_trigger_target) => {
 							let now:Instant = Instant::now();
@@ -127,14 +126,12 @@ impl TaskSystem {
 }
 impl Default for TaskSystem {
 	fn default() -> Self {
-		let modifications_queue:ModificationsQueue<(Vec<Task>, Arc<Mutex<bool>>)> = ModificationsQueue::new();
-		let status:Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+		let modifications_queue:ModificationsQueue<(Vec<Task>, bool)> = ModificationsQueue::new();
 		let error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static> = Arc::new(|task_name, error| eprintln!("TaskSyncer task '{task_name}' panicked: {error}"));
 		TaskSystem {
 			built_in_scheduler: TaskScheduler(modifications_queue.create_remote()),
-			is_running: Arc::clone(&status),
 			error_handler: Arc::clone(&error_handler),
-			_thread_handle: TaskSystem::spawn_thread(modifications_queue, status, error_handler)
+			_thread_handle: TaskSystem::spawn_thread(modifications_queue, error_handler)
 		}
 	}
 }
@@ -142,7 +139,7 @@ impl Default for TaskSystem {
 
 
 #[derive(Clone)]
-pub struct TaskScheduler(ModificationsQueueRemote<(Vec<Task>, Arc<Mutex<bool>>)>);
+pub struct TaskScheduler(ModificationsQueueRemote<(Vec<Task>, bool)>);
 impl TaskScheduler {
 	
 	/// Request to add a new task to the system. Will be applied on the next run of the system.
