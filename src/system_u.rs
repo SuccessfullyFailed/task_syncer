@@ -17,7 +17,7 @@ mod test {
 
 		// Run once.
 		system.start();
-		sleep(Duration::from_millis(1));
+		sleep(Duration::from_millis(6));
 		system.stop();
 
 		// Assert results.

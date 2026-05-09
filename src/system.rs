@@ -153,9 +153,10 @@ impl TaskScheduler {
 			for existing_task in &mut **tasks {
 				if existing_task.name == task.name {
 					*existing_task = task;
-					break;
+					return;
 				}
 			}
+			tasks.push(task);
 		});
 	}
 
