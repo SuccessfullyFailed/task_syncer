@@ -12,7 +12,7 @@ mod tests {
 		let mut task:Task = Task::new("test_task", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			if *RUN_PROOF.lock().unwrap() < 50 {
-				event.repeate_r()
+				event.repeat_r()
 			} else {
 				Ok(())
 			}

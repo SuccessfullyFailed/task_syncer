@@ -1,4 +1,4 @@
-use std::{ error::Error, sync::Arc, time::Instant, thread::{ self, JoinHandle } };
+use std::{ error::Error, sync::Arc, thread::{ self, JoinHandle }, time::{Duration, Instant} };
 use modifications_queue::{ ModificationsQueue, ModificationsQueueRemote };
 use crate::Task;
 
@@ -55,44 +55,54 @@ impl TaskSystem {
 			let mut tasks_and_status:(Vec<Task>, bool) = (Vec::new(), false);
 			let scheduler:TaskScheduler = TaskScheduler(modifications_queue.create_remote());
 
-			// Handle modifications until the system should run.
-			while !tasks_and_status.1 {
-				for modification in modifications_queue.await_change() {
-					modification(&mut tasks_and_status);
+			loop {
+
+				// Handle modifications until the system should run.
+				let pause_instant:Instant = Instant::now();
+				while !tasks_and_status.1 {
+					for modification in modifications_queue.await_change() {
+						modification(&mut tasks_and_status);
+					}
 				}
-			}
 
-			// Handle modifications and tasks while the system should run.
-			while tasks_and_status.1 {
-
-				// Run all tasks.
-				let now:Instant =  Instant::now();
+				// Modify all task timers by the amount of time the system was paused.
+				let now:Instant = Instant::now();
+				let paused_duration:Duration = now.duration_since(pause_instant);
 				for task in &mut tasks_and_status.0 {
-					if let Err(error) = task.run(&now, &scheduler) { // The run method skips any tasks that are not due to run.
-						error_handler(&task.name, error);
-					}
+					task.handle_paused_duration(&paused_duration);
 				}
 
-				// Wait until the next task is scheduled or the next modification.
-				let next_task_target:Option<Instant> = tasks_and_status.0.iter().map(|task| task.event.trigger_target).min();
-				let modifications:Vec<Box<dyn FnOnce(&mut (Vec<Task>, bool)) + Send + Sync>> = {
-					match next_task_target {
-						Some(next_trigger_target) => {
-							let now:Instant = Instant::now();
-							if next_trigger_target <= now {
-								modifications_queue.drain()
-							} else {
-								modifications_queue.await_change_timeout(next_trigger_target - now)
-							}
-						},
-						None => modifications_queue.await_change()
+				// Handle modifications and tasks while the system should run.
+				while tasks_and_status.1 {
+
+					// Run all tasks.
+					let now:Instant =  Instant::now();
+					for task in &mut tasks_and_status.0 {
+						if let Err(error) = task.run(&now, &scheduler) { // The run method skips any tasks that are not due to run.
+							error_handler(&task.name, error);
+						}
 					}
-				};
-				for modification in modifications {
-					modification(&mut tasks_and_status);
+
+					// Wait until the next task is scheduled or the next modification.
+					let next_task_target:Option<Instant> = tasks_and_status.0.iter().map(|task| task.event.trigger_target).min();
+					let modifications:Vec<Box<dyn FnOnce(&mut (Vec<Task>, bool)) + Send + Sync>> = {
+						match next_task_target {
+							Some(next_trigger_target) => {
+								let now:Instant = Instant::now();
+								if next_trigger_target <= now {
+									modifications_queue.drain()
+								} else {
+									modifications_queue.await_change_timeout(next_trigger_target - now)
+								}
+							},
+							None => modifications_queue.await_change()
+						}
+					};
+					for modification in modifications {
+						modification(&mut tasks_and_status);
+					}
 				}
 			}
-
 		})
 	}
 

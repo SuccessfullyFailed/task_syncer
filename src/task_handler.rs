@@ -36,7 +36,7 @@ impl TaskHandler {
 			// Function handler, return function result.
 			TaskHandler::Fn(handler) => handler(scheduler, event),
 
-			// task handler, run task until task event expires.
+			// Task handler, run task until task event expires.
 			TaskHandler::Task(task) => {
 				let result:Result<(), Box<dyn Error>> = task.run(now, scheduler);
 				if task.event.expired {

@@ -61,6 +61,11 @@ impl Task {
 		// Return result.
 		result
 	}
+
+	/// Let the task handle any changes after the system has been paused for the given duration.
+	pub fn handle_paused_duration(&mut self, duration:&Duration) {
+		self.event.delay(*duration);
+	}
 }
 
 
@@ -89,7 +94,7 @@ impl TaskEvent {
 
 	/// Set the event to run again.
 	/// Always returns 'Ok(())' so it can be used at the end of a handler.
-	pub fn repeate_r(&mut self) -> Result<(), Box<dyn Error>> {
+	pub fn repeat_r(&mut self) -> Result<(), Box<dyn Error>> {
 		self.repeat = true;
 		Ok(())
 	}

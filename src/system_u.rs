@@ -107,9 +107,13 @@ mod test {
 		system.start();
 		sleep(Duration::from_millis(15));
 		system.stop();
+		sleep(Duration::from_millis(50));
+		system.start();
+		sleep(Duration::from_millis(15));
+		system.stop();
 
 		// Assert results.
-		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 2);
+		assert_eq!(*RUN_PROOF_A.lock().unwrap(), 4);
 		assert_eq!(*RUN_PROOF_B.lock().unwrap(), 1);
 	}
 }
