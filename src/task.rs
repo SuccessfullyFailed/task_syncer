@@ -1,4 +1,4 @@
-use crate::{ TaskHandlerSource, task_handler::TaskHandler };
+use crate::{ task_handler::TaskHandler };
 use std::{ error::Error, time::{ Duration, Instant } };
 
 
@@ -15,11 +15,11 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<T:TaskHandlerSource + 'static>(name:&str, handler:T) -> Task {
+	pub fn new<Handler>(name:&str, handler:Handler) -> Task where TaskHandler:From<Handler> {
 		Task {
 			name: name.to_string(),
 			event: TaskEvent::default(),
-			handler: Box::new(handler.into_handler()),
+			handler: Box::new(TaskHandler::from(handler)),
 			catch_handler: None,
 			finally_handler: None
 		}

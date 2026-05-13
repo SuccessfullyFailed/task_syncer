@@ -15,8 +15,8 @@ impl TaskHandler {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task-handler.
-	pub fn new<Source:TaskHandlerSource>(source:Source) -> TaskHandler {
-		source.into_handler()
+	pub fn new<Handler>(source:Handler) -> TaskHandler where TaskHandler:From<Handler> {
+		TaskHandler::from(source)
 	}
 
 
@@ -75,27 +75,34 @@ impl TaskHandler {
 		}
 	}
 }
-
-
-
-pub trait TaskHandlerSource:Sized + Send + Sync + 'static {
-	#[allow(unused_mut)]
-	fn into_handler(mut self) -> TaskHandler {
-		TaskHandler::None
+impl<T:FnMut(&mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> From<T> for TaskHandler {
+	fn from(value:T) -> Self {
+		TaskHandler::Fn(
+			Box::new(value)
+		)
 	}
 }
-impl<T:TaskHandlerSource + Clone + 'static, const SIZE:usize> TaskHandlerSource for [T; SIZE] {
-	fn into_handler(self) -> TaskHandler {
-		self.to_vec().into_handler()
+impl<T:FnMut(&mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> From<(T, usize)> for TaskHandler {
+	fn from(value:(T, usize)) -> Self {
+		TaskHandler::Repeat((
+			Box::new(TaskHandler::from(value.0)),
+			0..value.1
+		))
 	}
 }
-impl<T:TaskHandlerSource + 'static> TaskHandlerSource for Vec<T> {
-	fn into_handler(self) -> TaskHandler {
-		TaskHandler::List((self.into_iter().map(|source| source.into_handler()).collect(), 0))
+impl<T> From<Vec<T>> for TaskHandler where TaskHandler:From<T> {
+	fn from(value:Vec<T>) -> Self {
+		TaskHandler::List((
+			value.into_iter().map(TaskHandler::from).collect(),
+			0
+		))
 	}
 }
-impl<T:FnMut(&mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> TaskHandlerSource for T {
-	fn into_handler(self) -> TaskHandler {
-		TaskHandler::Fn(Box::new(self))
+impl<T, const SIZE:usize> From<[T; SIZE]> for TaskHandler where TaskHandler:From<T> {
+	fn from(value:[T; SIZE]) -> Self {
+		TaskHandler::List((
+			value.into_iter().map(TaskHandler::from).collect(),
+			0
+		))
 	}
 }
