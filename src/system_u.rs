@@ -1,16 +1,17 @@
 #[cfg(test)]
 mod test {
+	use crate::{ Task, TaskEvent, TaskScheduler, TaskSystem };
 	use std::{ sync::Mutex, thread::sleep, time::Duration };
-	use crate::{ Task, TaskEvent, TaskSystem };
 
 
+	
 	#[test]
 	fn test_singular_system_cycle() {
 		static RUN_PROOF:Mutex<usize> = Mutex::new(0);
 
 		// Create system with a task.
 		let mut system:TaskSystem = TaskSystem::new();
-		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task1", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
@@ -31,11 +32,11 @@ mod test {
 
 		// Create system with two tasks.
 		let mut system:TaskSystem = TaskSystem::new();
-		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task1", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF_A.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
-		system.add_task(Task::new("task2", |_event:&mut TaskEvent| {
+		system.add_task(Task::new("task2", |_scheduler:&TaskScheduler, _event:&mut TaskEvent| {
 			*RUN_PROOF_B.lock().unwrap() += 1;
 			Ok(())
 		}));
@@ -58,11 +59,11 @@ mod test {
 
 		// Create system with two tasks.
 		let mut system:TaskSystem = TaskSystem::new();
-		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task1", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF_A.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
-		system.add_task(Task::new("task2", |_event:&mut TaskEvent| {
+		system.add_task(Task::new("task2", |_scheduler:&TaskScheduler, _event:&mut TaskEvent| {
 			*RUN_PROOF_B.lock().unwrap() += 1;
 			Ok(())
 		}));
@@ -70,7 +71,7 @@ mod test {
 		// Start system and add a third task while still running.
 		system.start();
 		sleep(Duration::from_millis(22));
-		system.add_task(Task::new("task3", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task3", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF_C.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
@@ -93,11 +94,11 @@ mod test {
 
 		// Create system with two tasks.
 		let mut system:TaskSystem = TaskSystem::new();
-		system.add_task(Task::new("task1", |event:&mut TaskEvent| {
+		system.add_task(Task::new("task1", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF_A.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(10))
 		}));
-		system.add_task(Task::new("task2", |_event:&mut TaskEvent| {
+		system.add_task(Task::new("task2", |_scheduler:&TaskScheduler, _event:&mut TaskEvent| {
 			*RUN_PROOF_B.lock().unwrap() += 1;
 			Ok(())
 		}));

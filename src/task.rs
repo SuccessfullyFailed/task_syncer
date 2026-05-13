@@ -1,4 +1,4 @@
-use crate::{ task_handler::TaskHandler };
+use crate::{ TaskScheduler, task_handler::TaskHandler };
 use std::{ error::Error, time::{ Duration, Instant } };
 
 
@@ -30,7 +30,7 @@ impl Task {
 	/* USAGE METHODS */
 
 	/// Run the task.
-	pub fn run(&mut self, now:&Instant) -> Result<(), Box<dyn Error>> {
+	pub fn run(&mut self, now:&Instant, scheduler:&TaskScheduler) -> Result<(), Box<dyn Error>> {
 
 		// If the task should not yet, return.
 		if self.event.expired || &self.event.trigger_target > now {
@@ -39,7 +39,7 @@ impl Task {
 
 		// Run handler.
 		self.event.repeat = false;
-		let result:Result<(), Box<dyn Error>> = self.handler.run(now, &mut self.event);
+		let result:Result<(), Box<dyn Error>> = self.handler.run(now, scheduler, &mut self.event);
 		if !self.event.repeat {
 			self.event.expire();
 		}

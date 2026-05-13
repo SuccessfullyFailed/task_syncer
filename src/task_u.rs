@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-	use std::{ sync::Mutex, time::{Duration, Instant} };
-	use crate::{ Task, TaskEvent };
+	use std::{ sync::Mutex, time::{ Duration, Instant } };
+	use crate::{ Task, TaskEvent, TaskScheduler };
 
 
 
@@ -9,7 +9,7 @@ mod tests {
 	fn test_task_handler_runs_handler() {
 		static RUN_PROOF:Mutex<u8> = Mutex::new(0);
 
-		let mut task:Task = Task::new("test_task", |event:&mut TaskEvent| {
+		let mut task:Task = Task::new("test_task", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			if *RUN_PROOF.lock().unwrap() < 50 {
 				event.repeate_r()
@@ -20,7 +20,7 @@ mod tests {
 		
 		let now:Instant = Instant::now();
 		for index in 1..=64 {
-			task.run(&now).unwrap();
+			task.run(&now, &TaskScheduler::fake()).unwrap();
 			assert_eq!(*RUN_PROOF.lock().unwrap(), index.min(50));
 			assert_eq!(task.event.expired, index >= 50);
 		}
@@ -30,14 +30,14 @@ mod tests {
 	fn test_task_handler_delay_triggers() {
 		static RUN_PROOF:Mutex<u8> = Mutex::new(0);
 
-		let mut task:Task = Task::new("test_task", |event:&mut TaskEvent| {
+		let mut task:Task = Task::new("test_task", |_scheduler:&TaskScheduler, event:&mut TaskEvent| {
 			*RUN_PROOF.lock().unwrap() += 1;
 			event.reschedule_r(Duration::from_millis(100))
 		});
 		
 		let mut now:Instant = Instant::now();
 		for index in 0..64 {
-			task.run(&now).unwrap();
+			task.run(&now, &TaskScheduler::fake()).unwrap();
 			assert_eq!(task.event.expired, false);
 			assert_eq!(*RUN_PROOF.lock().unwrap(), (index / 5) + 1);
 			now += Duration::from_millis(20);

@@ -53,6 +53,7 @@ impl TaskSystem {
 	fn spawn_thread(modifications_queue:ModificationsQueue<(Vec<Task>, bool)>, error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>) -> JoinHandle<()> {
 		thread::spawn(move || {
 			let mut tasks_and_status:(Vec<Task>, bool) = (Vec::new(), false);
+			let scheduler:TaskScheduler = TaskScheduler(modifications_queue.create_remote());
 
 			// Handle modifications until the system should run.
 			while !tasks_and_status.1 {
@@ -67,7 +68,7 @@ impl TaskSystem {
 				// Run all tasks.
 				let now:Instant =  Instant::now();
 				for task in &mut tasks_and_status.0 {
-					if let Err(error) = task.run(&now) { // The run method skips any tasks that are not due to run.
+					if let Err(error) = task.run(&now, &scheduler) { // The run method skips any tasks that are not due to run.
 						error_handler(&task.name, error);
 					}
 				}
@@ -141,6 +142,18 @@ impl Default for TaskSystem {
 #[derive(Clone)]
 pub struct TaskScheduler(ModificationsQueueRemote<(Vec<Task>, bool)>);
 impl TaskScheduler {
+
+	/* CONSTRUCTOR METHODS */
+
+	/// Create a scheduler to a nonexistent modifications queue.
+	#[cfg(test)]
+	pub(crate) fn fake() -> TaskScheduler {
+		TaskScheduler(ModificationsQueue::new().create_remote())
+	}
+
+
+
+	/* USAGE METHODS */
 	
 	/// Request to add a new task to the system. Will be applied on the next run of the system.
 	pub fn add_task(&self, task:Task) {
