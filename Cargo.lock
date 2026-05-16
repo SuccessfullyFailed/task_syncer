@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "modifications_queue"
 version = "0.1.1"
-source = "git+https://github.com/SuccessfullyFailed/modifications_queue#e729315a01796ba5ce0ff7981388080d90530b98"
+source = "git+https://github.com/SuccessfullyFailed/modifications_queue#63cd6338e049b869e153cb1c2350e13cbaca0f10"
 
 [[package]]
 name = "task_syncer"

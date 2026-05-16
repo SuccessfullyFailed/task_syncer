@@ -73,7 +73,8 @@ impl Task {
 pub struct TaskEvent {
 	pub(crate) expired:bool,
 	pub(crate) repeat:bool,
-	pub(crate) trigger_target:Instant
+	pub(crate) trigger_target:Instant,
+	pub(crate) require_accurate_timing:bool
 }
 impl TaskEvent {
 
@@ -85,6 +86,14 @@ impl TaskEvent {
 	/// Delay the target trigger time by the given duration.
 	pub fn delay(&mut self, delay:Duration) {
 		self.trigger_target += delay;
+		self.require_accurate_timing = false;
+	}
+
+	/// Delay the target trigger time by the given duration.
+	/// Uses a more accurate and cpu-consuming way to match the timing.
+	pub fn delay_accurate(&mut self, delay:Duration) {
+		self.trigger_target += delay;
+		self.require_accurate_timing = true;
 	}
 
 	/// Set the event to run again.
@@ -107,10 +116,25 @@ impl TaskEvent {
 	}
 
 	/// Reschedule the event to run again.
+	/// Combines the 'delay' and 'run_again' function.
+	/// Uses a more accurate and cpu-consuming way to match the timing.
+	pub fn reschedule_accurate(&mut self, delay:Duration) {
+		self.delay_accurate(delay);
+		self.repeat();
+	}
+
+	/// Reschedule the event to run again.
 	/// Combines the 'delay' and 'run_again' function. Always returns 'Ok(())' so it can be used at the end of a handler.
 	pub fn reschedule_r(&mut self, delay:Duration) -> Result<(), Box<dyn Error>> {
-		self.delay(delay);
-		self.repeat();
+		self.reschedule(delay);
+		Ok(())
+	}
+
+	/// Reschedule the event to run again.
+	/// Combines the 'delay' and 'run_again' function. Always returns 'Ok(())' so it can be used at the end of a handler.
+	/// Uses a more accurate and cpu-consuming way to match the timing.
+	pub fn reschedule_accurate_r(&mut self, delay:Duration) -> Result<(), Box<dyn Error>> {
+		self.reschedule_accurate(delay);
 		Ok(())
 	}
 }
@@ -119,7 +143,8 @@ impl Default for TaskEvent {
 		TaskEvent {
 			expired: false,
 			repeat: true,
-			trigger_target: Instant::now()
+			trigger_target: Instant::now(),
+			require_accurate_timing: false
 		}
 	}
 }

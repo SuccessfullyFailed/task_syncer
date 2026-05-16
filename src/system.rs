@@ -51,6 +51,8 @@ impl TaskSystem {
 
 	/// Spawn the thread that handles all modifications and tasks.
 	fn spawn_thread(modifications_queue:ModificationsQueue<(Vec<Task>, bool)>, error_handler:Arc<dyn Fn(&str, Box<dyn Error>) + Send + Sync + 'static>) -> JoinHandle<()> {
+		const TIMEOUT_ACCURACY:Duration = Duration::from_millis(16);
+
 		thread::spawn(move || {
 			let mut tasks_and_status:(Vec<Task>, bool) = (Vec::new(), false);
 			let scheduler:TaskScheduler = TaskScheduler(modifications_queue.create_remote());
@@ -66,8 +68,7 @@ impl TaskSystem {
 				}
 
 				// Modify all task timers by the amount of time the system was paused.
-				let now:Instant = Instant::now();
-				let paused_duration:Duration = now.duration_since(pause_instant);
+				let paused_duration:Duration = pause_instant.elapsed();
 				for task in &mut tasks_and_status.0 {
 					task.handle_paused_duration(&paused_duration);
 				}
@@ -83,8 +84,20 @@ impl TaskSystem {
 						}
 					}
 
+					// Find out when the next task is scheduled to trigger.
+					let mut next_task_target:Option<Instant> = None;
+					let mut next_accurate_task_target:Option<Instant> = None;
+					for task in &tasks_and_status.0 {
+						if next_task_target.is_none_or(|quickest_instant| task.event.trigger_target < quickest_instant) {
+							next_task_target = Some(task.event.trigger_target);
+						}
+						if task.event.require_accurate_timing && next_accurate_task_target.is_none_or(|quickest_instant| task.event.trigger_target < quickest_instant) {
+							next_accurate_task_target = Some(task.event.trigger_target);
+						}
+					}
+					let accurate_task_within_timeframe:bool = next_accurate_task_target.is_some_and(|target| target.duration_since(now) < TIMEOUT_ACCURACY);
+
 					// Wait until the next task is scheduled or the next modification.
-					let next_task_target:Option<Instant> = tasks_and_status.0.iter().map(|task| task.event.trigger_target).min();
 					let modifications:Vec<Box<dyn FnOnce(&mut (Vec<Task>, bool)) + Send + Sync>> = {
 						match next_task_target {
 							Some(next_trigger_target) => {
@@ -92,7 +105,12 @@ impl TaskSystem {
 								if next_trigger_target <= now {
 									modifications_queue.drain()
 								} else {
-									modifications_queue.await_change_timeout(next_trigger_target - now)
+									let timeout:Duration = next_trigger_target - now;
+									if accurate_task_within_timeframe {
+										modifications_queue.await_change_timeout_accurate(timeout)
+									} else {
+										modifications_queue.await_change_timeout(timeout)
+									}
 								}
 							},
 							None => modifications_queue.await_change()
