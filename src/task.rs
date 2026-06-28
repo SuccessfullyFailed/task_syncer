@@ -1,12 +1,21 @@
-use crate::{ TaskScheduler, task_handler::TaskHandler };
 use std::{ error::Error, time::{ Duration, Instant } };
+use crate::TaskScheduler;
+
+
+
+pub struct TaskHandler(Box<dyn FnMut(&TaskScheduler, &mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>);
+impl<T:FnMut(&TaskScheduler, &mut TaskEvent) -> Result<(), Box<dyn Error>> + Send + Sync + 'static> From<T> for TaskHandler {
+	fn from(value:T) -> Self {
+		TaskHandler(Box::new(value))
+	}
+}
 
 
 
 pub struct Task {
 	pub(crate) name:String,
 	pub(crate) event:TaskEvent,
-	handler:Box<TaskHandler>,
+	handler:TaskHandler,
 	catch_handler:Option<Box<dyn Fn(&Box<dyn Error>) + Send + Sync + 'static>>,
 	finally_handler:Option<Box<dyn Fn(&Result<(), Box<dyn Error>>) + Send + Sync + 'static>>
 }
@@ -15,11 +24,11 @@ impl Task {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new task.
-	pub fn new<Handler>(name:&str, handler:Handler) -> Task where TaskHandler:From<Handler> {
+	pub fn new<Handler:Into<TaskHandler>>(name:&str, handler:Handler) -> Task {
 		Task {
 			name: name.to_string(),
 			event: TaskEvent::default(),
-			handler: Box::new(TaskHandler::from(handler)),
+			handler: handler.into(),
 			catch_handler: None,
 			finally_handler: None
 		}
@@ -39,7 +48,7 @@ impl Task {
 
 		// Run handler.
 		self.event.repeat = false;
-		let result:Result<(), Box<dyn Error>> = self.handler.run(now, scheduler, &mut self.event);
+		let result:Result<(), Box<dyn Error>> = (self.handler.0)(scheduler, &mut self.event);
 		if !self.event.repeat {
 			self.event.expire();
 		}

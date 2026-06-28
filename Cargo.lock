@@ -9,7 +9,7 @@ source = "git+https://github.com/SuccessfullyFailed/modifications_queue#63cd6338
 
 [[package]]
 name = "task_syncer"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "modifications_queue",
 ]
